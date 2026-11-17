@@ -10,7 +10,8 @@ public sealed class EngineClient
 {
     private readonly string _ps;
     private readonly string _engine;
-    private EngineDaemon _daemon;
+    private EngineDaemon _daemonFast;   // list / catalog / warm：必须毫秒级
+    private EngineDaemon _daemonSlow;   // info：可能上百毫秒，单独一个进程
     private readonly Action<string> _log;
     private readonly System.Collections.Generic.Dictionary<string, int> _calls = new();
     private volatile bool _daemonReady;
@@ -24,20 +25,27 @@ public sealed class EngineClient
         WorkingRoot = workingRoot;
         _ps = powershell;
         _log = log;
-        _daemon = new EngineDaemon(enginePath, workingRoot);
+        _daemonFast = new EngineDaemon(enginePath, workingRoot);
+        _daemonSlow = new EngineDaemon(enginePath, workingRoot);
     }
 
-    public void Dispose() => _daemon.Dispose();
+    public void Dispose()
+    {
+        try { _daemonFast.Dispose(); } catch { }
+        try { _daemonSlow.Dispose(); } catch { }
+    }
 
     /// <summary>启动预热：把 daemon 和 wsl 列表缓存先热起来（失败无所谓）。</summary>
     public async Task PrewarmAsync()
     {
         try
         {
-            await _daemon.QueryAsync("warm");
-            await _daemon.QueryAsync("list");
+            await Task.WhenAll(
+                _daemonFast.QueryAsync("warm"),
+                _daemonSlow.QueryAsync("warm"));
+            await _daemonFast.QueryAsync("list");
             _daemonReady = true;
-            _log?.Invoke("[daemon] 已就绪");
+            _log?.Invoke("[daemon] 已就绪（快/慢双进程）");
         }
         catch (Exception ex) { _daemonReady = false; _log?.Invoke("[daemon] 预热失败: " + ex.Message); }
     }
@@ -45,7 +53,8 @@ public sealed class EngineClient
     /// <summary>动作完成后让 daemon 丢掉 info 缓存，避免看到旧状态。</summary>
     public async Task InvalidateAsync()
     {
-        try { await _daemon.QueryAsync("invalidate"); } catch { }
+        try { await _daemonFast.QueryAsync("invalidate"); } catch { }
+        try { await _daemonSlow.QueryAsync("invalidate"); } catch { }
     }
 
     public ProcessStartInfo CreateStartInfo(params string[] args)
@@ -106,10 +115,12 @@ public sealed class EngineClient
         var mapped = _daemonReady ? MapToDaemon(args) : null;
         if (mapped != null)
         {
+            var isSlow = mapped.Value.Method == "info";
+            var daemon = isSlow ? _daemonSlow : _daemonFast;
             try
             {
                 var sw = Stopwatch.StartNew();
-                var r = await _daemon.QueryAsync(mapped.Value.Method, mapped.Value.Args);
+                var r = await daemon.QueryAsync(mapped.Value.Method, mapped.Value.Args);
                 _calls.TryGetValue(mapped.Value.Method, out var n);
                 _calls[mapped.Value.Method] = ++n;
                 var ms = sw.ElapsedMilliseconds;
@@ -119,8 +130,9 @@ public sealed class EngineClient
             }
             catch
             {
-                try { _daemon.Dispose(); } catch { }
-                _daemon = new EngineDaemon(_engine, WorkingRoot);
+                try { daemon.Dispose(); } catch { }
+                if (isSlow) _daemonSlow = new EngineDaemon(_engine, WorkingRoot);
+                else _daemonFast = new EngineDaemon(_engine, WorkingRoot);
                 _daemonReady = false;
                 _ = PrewarmAsync();   // 后台重建，失败就继续走直连
             }
