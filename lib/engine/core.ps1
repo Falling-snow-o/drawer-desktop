@@ -42,10 +42,6 @@ function Invoke-BoxRegistryLocked([scriptblock] $Body) {
     }
 }
 
-function Save-BoxRegistry($list) {
-    Invoke-BoxRegistryLocked { Write-BoxRegistryRaw $list } | Out-Null
-}
-
 function Register-Box($name, $dir) {
     return Invoke-BoxRegistryLocked {
         $l = @(Read-BoxRegistry)
