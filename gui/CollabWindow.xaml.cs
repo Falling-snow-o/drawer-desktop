@@ -17,6 +17,15 @@ public partial class CollabWindow : Window
         _run = run;
         HeadText.Text = "协同 · " + box;
         SubText.Text = "data/ 用 git 协作；环境用包清单补装";
+        InteractionHub.BusyChanged += OnBusyChanged;
+        InteractionHub.ActionCompleted += OnExternalChange;
+        Closed += (_, _) =>
+        {
+            InteractionHub.BusyChanged -= OnBusyChanged;
+            InteractionHub.ActionCompleted -= OnExternalChange;
+        };
+        RootGrid.IsEnabled = !InteractionHub.IsBusy;
+
         Loaded += async (_, _) =>
         {
             await Do("status");
@@ -26,6 +35,14 @@ public partial class CollabWindow : Window
                 Tabs.SelectedIndex = 3;
             }
         };
+    }
+
+    private void OnBusyChanged(bool busy) => Dispatcher.BeginInvoke(new Action(() => RootGrid.IsEnabled = !busy));
+
+    private void OnExternalChange(string _)
+    {
+        if (!IsVisible) return;
+        Dispatcher.BeginInvoke(async () => await Do("status"));
     }
 
     private async Task Do(params string[] tail)

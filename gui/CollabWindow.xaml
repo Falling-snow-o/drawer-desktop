@@ -5,7 +5,7 @@
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize" ShowInTaskbar="False"
         Background="#F2F2F7" Foreground="#1D1D1F"
         FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">
-  <Grid Margin="20">
+  <Grid x:Name="RootGrid" Margin="20">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>

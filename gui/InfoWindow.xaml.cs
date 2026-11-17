@@ -21,7 +21,16 @@ public partial class InfoWindow : Window
         HeadText.Text = "抽屉信息";
         SubText.Text = box;
         Loaded += async (_, _) => await Reload();
+        InteractionHub.ActionCompleted += OnExternalChange;
+        Closed += (_, _) => InteractionHub.ActionCompleted -= OnExternalChange;
     }
+
+    private void OnExternalChange(string _)
+    {
+        if (InteractionHub.IsBusy) return;
+        Dispatcher.BeginInvoke(async () => await Reload());
+    }
+
 
     private async System.Threading.Tasks.Task Reload()
     {

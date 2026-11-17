@@ -36,6 +36,7 @@ public partial class MainWindow
         var keep = SelectedBox;
         CountText.Text = $"{names.Count} 个";
         PopulateList(names, keep);
+        InteractionHub.NotifyBoxes();
     }
 
 

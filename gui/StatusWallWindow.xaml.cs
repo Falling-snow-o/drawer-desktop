@@ -28,7 +28,27 @@ public partial class StatusWallWindow : Window
         _info = info;
         _pick = pick;
         Loaded += async (_, _) => await RefreshAsync();
+        InteractionHub.ActionCompleted += OnExternalChange;
+        InteractionHub.BoxesChanged += OnExternalChange;
+        Closed += (_, _) =>
+        {
+            InteractionHub.ActionCompleted -= OnExternalChange;
+            InteractionHub.BoxesChanged -= OnExternalChange;
+        };
     }
+
+    private void OnExternalChange(string _)
+    {
+        if (InteractionHub.IsBusy) return;
+        Dispatcher.BeginInvoke(async () => await RefreshAsync());
+    }
+
+    private void OnExternalChange()
+    {
+        if (InteractionHub.IsBusy) return;
+        Dispatcher.BeginInvoke(async () => await RefreshAsync());
+    }
+
 
     private async Task RefreshAsync()
     {

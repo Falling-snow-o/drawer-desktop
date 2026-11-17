@@ -80,6 +80,11 @@ public partial class MainWindow
     public void RequestQuit()
     {
         if (_busy) { Log("[退出] 有操作在执行，等结束再退"); return; }
+        // 先关掉所有附属窗口，避免主窗口关闭后残留模态循环
+        foreach (var w in Application.Current.Windows.OfType<Window>().Where(w => w != this).ToList())
+        {
+            try { w.Close(); } catch { }
+        }
         _reallyExit = true;
         Close();
     }
@@ -92,6 +97,7 @@ public partial class MainWindow
         _busy = true;
         _busyStart = DateTime.Now;
         MarkBusy(args.Length > 0 ? args[0] : "action");
+        InteractionHub.SetBusy(true);
         _lastActive = DateTime.Now;
         ProgressText.Text = "执行中 0s";
         SetButtons();
@@ -144,6 +150,8 @@ public partial class MainWindow
             _runProc = null;
             _busy = false;
             ClearBusyMark();
+            InteractionHub.SetBusy(false);
+            InteractionHub.NotifyAction(args.Length > 0 ? args[0] : "action");
             Bar.IsIndeterminate = false;
             Bar.Value = 0;
             Bar.Visibility = Visibility.Collapsed;
