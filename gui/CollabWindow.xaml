@@ -1,88 +1,103 @@
 ﻿<Window x:Class="BoxRun.CollabWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="协同" Width="640" Height="580"
+        Title="协同" Width="640" Height="620"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize" ShowInTaskbar="False"
         Background="#F2F2F7" Foreground="#1D1D1F"
         FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">
   <Grid Margin="20">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
     <StackPanel>
       <TextBlock x:Name="HeadText" Text="协同" FontSize="22" FontWeight="Bold"/>
-      <TextBlock Text="data/ 用 git 协作；环境用包清单补装" Foreground="#86868B" FontSize="11" Margin="0,4,0,0"/>
+      <TextBlock x:Name="SubText" Text="data/ 用 git 协作" Foreground="#86868B" FontSize="11" Margin="0,4,0,0"/>
     </StackPanel>
 
-    <Grid Grid.Row="1" Margin="0,12,0,6">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*"/>
-        <ColumnDefinition Width="Auto"/>
-        <ColumnDefinition Width="Auto"/>
-        <ColumnDefinition Width="Auto"/>
-      </Grid.ColumnDefinitions>
-      <TextBox x:Name="RemoteBox" Height="30" VerticalContentAlignment="Center"
-               ToolTip="远端地址（本地裸仓库路径或 git URL）"/>
-      <Button Grid.Column="1" Content="初始化" Padding="12,6" Margin="8,0,0,0"
-              BorderThickness="0" Background="#E9E9ED" Click="InitBtn_Click"/>
-      <Button Grid.Column="2" Content="克隆" Padding="12,6" Margin="6,0,0,0"
-              BorderThickness="0" Background="#E9E9ED" Click="CloneBtn_Click"/>
-      <Button Grid.Column="3" Content="设远端" Padding="12,6" Margin="6,0,0,0"
-              BorderThickness="0" Background="#E9E9ED" Click="RemoteBtn_Click"/>
-    </Grid>
+    <TabControl x:Name="Tabs" Grid.Row="1" Margin="0,14,0,0" Background="Transparent" BorderThickness="0">
+      <!-- 日常 -->
+      <TabItem Header="日常">
+        <StackPanel Margin="14">
+          <TextBlock Text="提交并同步是最常用的操作。" Foreground="#86868B" FontSize="11" Margin="0,0,0,6"/>
+          <TextBox x:Name="MsgBox" Height="32" VerticalContentAlignment="Center"
+                   ToolTip="提交说明（留空自动生成）"/>
+          <WrapPanel Margin="0,10,0,0">
+            <Button Content="提交" Padding="16,7" Margin="0,0,8,8" BorderThickness="0"
+                    Background="#E9E9ED" Click="CommitBtn_Click"/>
+            <Button Content="同步（提交+拉取+推送）" Padding="16,7" Margin="0,0,8,8" BorderThickness="0"
+                    Background="#0071E3" Foreground="White" Click="SyncBtn_Click"/>
+          </WrapPanel>
+          <TextBlock Text="只同步不提交：" Foreground="#86868B" FontSize="11" Margin="0,6,0,6"/>
+          <WrapPanel>
+            <Button Content="抓取" Padding="14,6" Margin="0,0,8,0" BorderThickness="0" Background="#E9E9ED" Click="FetchBtn_Click"/>
+            <Button Content="拉取" Padding="14,6" Margin="0,0,8,0" BorderThickness="0" Background="#E9E9ED" Click="PullBtn_Click"/>
+            <Button Content="推送" Padding="14,6" BorderThickness="0" Background="#E9E9ED" Click="PushBtn_Click"/>
+          </WrapPanel>
+        </StackPanel>
+      </TabItem>
 
-    <Grid Grid.Row="2" Margin="0,0,0,6">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*"/>
-        <ColumnDefinition Width="Auto"/>
-        <ColumnDefinition Width="Auto"/>
-        <ColumnDefinition Width="Auto"/>
-      </Grid.ColumnDefinitions>
-      <TextBox x:Name="BranchBox" Height="30" VerticalContentAlignment="Center"
-               ToolTip="分支名；标签按钮也用这个输入框"/>
-      <Button Grid.Column="1" Content="新建分支" Padding="12,6" Margin="8,0,0,0"
-              BorderThickness="0" Background="#E9E9ED" Click="NewBranchBtn_Click"/>
-      <Button Grid.Column="2" Content="切换" Padding="12,6" Margin="6,0,0,0"
-              BorderThickness="0" Background="#E9E9ED" Click="SwitchBtn_Click"/>
-      <Button Grid.Column="3" Content="分支列表" Padding="12,6" Margin="6,0,0,0"
-              BorderThickness="0" Background="#E9E9ED" Click="BranchListBtn_Click"/>
-    </Grid>
+      <!-- 分支 -->
+      <TabItem Header="分支">
+        <StackPanel Margin="14">
+          <TextBlock Text="分支名" Foreground="#86868B" FontSize="11" Margin="0,0,0,4"/>
+          <TextBox x:Name="BranchBox" Height="32" VerticalContentAlignment="Center"/>
+          <WrapPanel Margin="0,10,0,0">
+            <Button Content="新建并切换" Padding="14,7" Margin="0,0,8,8" BorderThickness="0" Background="#E9E9ED" Click="NewBranchBtn_Click"/>
+            <Button Content="切换" Padding="14,7" Margin="0,0,8,8" BorderThickness="0" Background="#E9E9ED" Click="SwitchBtn_Click"/>
+            <Button Content="分支列表" Padding="14,7" Margin="0,0,8,8" BorderThickness="0" Background="#E9E9ED" Click="BranchListBtn_Click"/>
+          </WrapPanel>
+          <TextBlock Text="合并：把上面填的分支合进当前分支" Foreground="#86868B" FontSize="11" Margin="0,10,0,6"/>
+          <Button Content="合并远端分支" HorizontalAlignment="Left" Padding="14,7"
+                  BorderThickness="0" Background="#E9E9ED" Click="MergeBtn_Click"/>
+        </StackPanel>
+      </TabItem>
 
-    <Grid Grid.Row="3" Margin="0,0,0,8">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*"/>
-        <ColumnDefinition Width="Auto"/>
-        <ColumnDefinition Width="Auto"/>
-      </Grid.ColumnDefinitions>
-      <TextBox x:Name="MsgBox" Height="30" VerticalContentAlignment="Center"
-               ToolTip="提交信息"/>
-      <Button Grid.Column="1" Content="提交" Padding="14,6" Margin="8,0,0,0"
-              BorderThickness="0" Background="#E9E9ED" Click="CommitBtn_Click"/>
-      <Button Grid.Column="2" Content="同步" Padding="14,6" Margin="6,0,0,0"
-              BorderThickness="0" Background="#0071E3" Foreground="White" Click="SyncBtn_Click"/>
-    </Grid>
+      <!-- 历史 -->
+      <TabItem Header="历史">
+        <StackPanel Margin="14">
+          <WrapPanel>
+            <Button Content="状态" Padding="14,7" Margin="0,0,8,8" BorderThickness="0" Background="#E9E9ED" Click="StatusBtn_Click"/>
+            <Button Content="差异" Padding="14,7" Margin="0,0,8,8" BorderThickness="0" Background="#E9E9ED" Click="DiffBtn_Click"/>
+            <Button Content="日志（20 条）" Padding="14,7" Margin="0,0,8,8" BorderThickness="0" Background="#E9E9ED" Click="LogBtn_Click"/>
+          </WrapPanel>
+          <TextBlock Text="贮藏与标签" Foreground="#86868B" FontSize="11" Margin="0,10,0,6"/>
+          <WrapPanel>
+            <Button Content="贮藏当前改动" Padding="14,7" Margin="0,0,8,8" BorderThickness="0" Background="#E9E9ED" Click="StashBtn_Click"/>
+            <Button Content="恢复贮藏" Padding="14,7" Margin="0,0,8,8" BorderThickness="0" Background="#E9E9ED" Click="StashPopBtn_Click"/>
+          </WrapPanel>
+          <Grid Margin="0,4,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="TagBox" Height="30" VerticalContentAlignment="Center" ToolTip="标签名"/>
+            <Button Grid.Column="1" Content="打标签" Padding="14,6" Margin="8,0,0,0"
+                    BorderThickness="0" Background="#E9E9ED" Click="TagBtn_Click"/>
+          </Grid>
+        </StackPanel>
+      </TabItem>
 
-    <WrapPanel Grid.Row="4" Margin="0,0,0,8">
-      <Button Content="状态" Padding="10,5" Margin="0,0,6,6" BorderThickness="0" Background="#E9E9ED" Click="StatusBtn_Click"/>
-      <Button Content="差异" Padding="10,5" Margin="0,0,6,6" BorderThickness="0" Background="#E9E9ED" Click="DiffBtn_Click"/>
-      <Button Content="日志" Padding="10,5" Margin="0,0,6,6" BorderThickness="0" Background="#E9E9ED" Click="LogBtn_Click"/>
-      <Button Content="抓取" Padding="10,5" Margin="0,0,6,6" BorderThickness="0" Background="#E9E9ED" Click="FetchBtn_Click"/>
-      <Button Content="拉取" Padding="10,5" Margin="0,0,6,6" BorderThickness="0" Background="#E9E9ED" Click="PullBtn_Click"/>
-      <Button Content="推送" Padding="10,5" Margin="0,0,6,6" BorderThickness="0" Background="#E9E9ED" Click="PushBtn_Click"/>
-      <Button Content="贮藏" Padding="10,5" Margin="0,0,6,6" BorderThickness="0" Background="#E9E9ED" Click="StashBtn_Click"/>
-      <Button Content="恢复" Padding="10,5" Margin="0,0,6,6" BorderThickness="0" Background="#E9E9ED" Click="StashPopBtn_Click"/>
-      <Button Content="打标签" Padding="10,5" Margin="0,0,6,6" BorderThickness="0" Background="#E9E9ED" Click="TagBtn_Click"/>
-      <Button Content="合并分支" Padding="10,5" Margin="0,0,6,6" BorderThickness="0" Background="#E9E9ED" Click="MergeBtn_Click"/>
-    </WrapPanel>
+      <!-- 仓库 -->
+      <TabItem Header="仓库">
+        <StackPanel Margin="14">
+          <TextBlock Text="远端地址（本地裸仓库路径或 git URL）" Foreground="#86868B" FontSize="11" Margin="0,0,0,4"/>
+          <TextBox x:Name="RemoteBox" Height="32" VerticalContentAlignment="Center"/>
+          <WrapPanel Margin="0,10,0,0">
+            <Button Content="初始化为协同仓库" Padding="14,7" Margin="0,0,8,8" BorderThickness="0" Background="#E9E9ED" Click="InitBtn_Click"/>
+            <Button Content="从远端克隆" Padding="14,7" Margin="0,0,8,8" BorderThickness="0" Background="#E9E9ED" Click="CloneBtn_Click"/>
+            <Button Content="只改远端地址" Padding="14,7" Margin="0,0,8,8" BorderThickness="0" Background="#E9E9ED" Click="RemoteBtn_Click"/>
+          </WrapPanel>
+          <TextBlock Text="初始化会给 data/ 建 git 仓库并推送；克隆用于第二个人加入。" Foreground="#A1A1A6"
+                     FontSize="10" TextWrapping="Wrap" Margin="0,8,0,0"/>
+        </StackPanel>
+      </TabItem>
+    </TabControl>
 
-    <Border Grid.Row="5" Background="#FFFFFF" CornerRadius="12" Padding="10">
+    <Border Grid.Row="2" Background="#FFFFFF" CornerRadius="12" Padding="10" Height="170" Margin="0,10,0,0">
       <ScrollViewer VerticalScrollBarVisibility="Auto">
         <TextBox x:Name="OutBox" BorderThickness="0" Background="Transparent"
                  FontFamily="Cascadia Mono, Consolas" FontSize="11.5"
@@ -90,8 +105,9 @@
       </ScrollViewer>
     </Border>
 
-    <Grid Grid.Row="6" Margin="0,8,0,0">
-      <TextBlock Text="冲突时在 data/ 里解决后点「提交」" Foreground="#A1A1A6" FontSize="10" VerticalAlignment="Center"/>
+    <Grid Grid.Row="3" Margin="0,8,0,0">
+      <TextBlock x:Name="HintText" Text="冲突时在 data/ 里解决后点「提交」" Foreground="#A1A1A6"
+                 FontSize="10" VerticalAlignment="Center"/>
       <Button Content="关闭" HorizontalAlignment="Right" Padding="14,6"
               BorderThickness="0" Background="#E9E9ED" IsCancel="True" Click="CloseBtn_Click"/>
     </Grid>
