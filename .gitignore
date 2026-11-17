@@ -11,3 +11,6 @@ obj/
 .vs/
 .idea/
 *.log
+
+# 本地备份
+backup/

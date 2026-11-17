@@ -63,6 +63,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         CleanupLogs();
+        EnsureSettingsVersion();
 
         (_engine, _root) = FindEngine();
         _client = new EngineClient(_engine, _root, LogTrace);
@@ -276,6 +277,21 @@ public partial class MainWindow : Window
             var cutoff = DateTime.Now.AddDays(-14);
             foreach (var f in new DirectoryInfo(LogDir).GetFiles("gui-*.log*"))
                 if (f.LastWriteTime < cutoff) f.Delete();
+        }
+        catch { }
+    }
+
+    /// <summary>旧版 settings.json 没有 version，启动时补一个（保留其余字段）。</summary>
+    private static void EnsureSettingsVersion()
+    {
+        try
+        {
+            var file = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".boxrun", "settings.json");
+            if (!File.Exists(file)) return;
+            var root = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(file)) as System.Text.Json.Nodes.JsonObject;
+            if (root == null || root.ContainsKey("version")) return;
+            root["version"] = 1;
+            File.WriteAllText(file, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { }
     }
