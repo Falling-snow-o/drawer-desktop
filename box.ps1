@@ -145,6 +145,19 @@ if ($verbTitle.ContainsKey($v) -and $Box) {
     Write-Head $verbTitle[$v]
 }
 
+# 会改动盒子状态的动作：同一盒子同一时间只允许一个
+$actionVerbs = @('build','up','down','remove','rm','rename','snap','snap-restore','snap-delete',
+                 'restore','clean','install','uninstall')
+$actionLock = $null
+if ($Box -and ($actionVerbs -contains $v)) {
+    $actionLock = Lock-BoxAction $Box 0
+    if (-not $actionLock) {
+        Write-Bad ("「" + $Box + "」正在执行另一个操作，稍后再试")
+        Write-Dim '如果是上次异常退出，等几秒或检查是否有残留的 box.ps1 进程'
+        exit 2
+    }
+}
+
 try {
 switch ($v) {
     'scan'    {
@@ -296,4 +309,6 @@ Drawer Desktop —— 一个装 WSL 的抽屉
     }
     Write-Host ""
     exit 1
+} finally {
+    Unlock-BoxAction $actionLock
 }

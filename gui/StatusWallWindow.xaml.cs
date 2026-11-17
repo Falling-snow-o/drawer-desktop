@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shapes;
 
 namespace BoxRun;
 
@@ -19,7 +19,16 @@ public partial class StatusWallWindow : Window
     private static readonly Brush Green = new SolidColorBrush(Color.FromRgb(0x34, 0xC7, 0x59));
     private static readonly Brush Yellow = new SolidColorBrush(Color.FromRgb(0xFF, 0x9F, 0x0A));
     private static readonly Brush Red = new SolidColorBrush(Color.FromRgb(0xFF, 0x3B, 0x30));
-    private static readonly Brush Gray = new SolidColorBrush(Color.FromRgb(0xE5, 0xE5, 0xEA));
+
+    private readonly Dictionary<string, CellView> _cells = new();
+    private bool _refreshing;
+
+    private sealed class CellView
+    {
+        public FrameworkElement Root;
+        public Border Cell;
+        public TextBlock Label;
+    }
 
     public StatusWallWindow(Func<Task<string>> list, Func<string, Task<string>> info, Action<string> pick)
     {
@@ -37,51 +46,77 @@ public partial class StatusWallWindow : Window
         };
     }
 
-    private void OnExternalChange(string _)
+    private void OnExternalChange(string _) => ScheduleRefresh();
+    private void OnExternalChange() => ScheduleRefresh();
+
+    private void ScheduleRefresh()
     {
         if (InteractionHub.IsBusy) return;
         Dispatcher.BeginInvoke(async () => await RefreshAsync());
     }
-
-    private void OnExternalChange()
-    {
-        if (InteractionHub.IsBusy) return;
-        Dispatcher.BeginInvoke(async () => await RefreshAsync());
-    }
-
 
     private async Task RefreshAsync()
     {
-        HintText.Text = "读取中…";
-        WallPanel.Children.Clear();
-
-        var names = new List<string>();
+        if (_refreshing) return;
+        _refreshing = true;
         try
         {
-            var raw = await _list();
-            var json = JsonUtil.Array(raw);
-            using var doc = JsonDocument.Parse(json);
-            foreach (var el in doc.RootElement.EnumerateArray())
+            HintText.Text = "读取中…";
+
+            var names = new List<string>();
+            try
             {
-                string n = null;
-                if (el.ValueKind == JsonValueKind.String) n = el.GetString();
-                else if (el.TryGetProperty("name", out var p)) n = p.GetString();
-                if (!string.IsNullOrEmpty(n)) names.Add(n);
+                var raw = await _list();
+                var json = JsonUtil.Array(raw);
+                using var doc = JsonDocument.Parse(json);
+                foreach (var el in doc.RootElement.EnumerateArray())
+                {
+                    string n = null;
+                    if (el.ValueKind == JsonValueKind.String) n = el.GetString();
+                    else if (el.TryGetProperty("name", out var p)) n = p.GetString();
+                    if (!string.IsNullOrEmpty(n)) names.Add(n);
+                }
             }
-        }
-        catch { }
+            catch { }
 
-        int ok = 0, run = 0, bad = 0;
-        foreach (var n in names)
+            int ok = 0, run = 0, bad = 0;
+            var seen = new HashSet<string>();
+
+            foreach (var n in names)
+            {
+                seen.Add(n);
+                var (state, detail) = await ProbeAsync(n);
+                Brush brush = state == 0 ? Green : state == 1 ? Yellow : Red;
+                if (state == 0) ok++; else if (state == 1) run++; else bad++;
+
+                var shown = BoxMeta.DisplayOf(n);
+                if (_cells.TryGetValue(n, out var cell))
+                {
+                    // 原地更新，避免整表清空造成闪烁
+                    cell.Cell.Background = brush;
+                    cell.Label.Text = shown;
+                    cell.Root.ToolTip = $"{shown}\n{n}\n{detail}";
+                }
+                else
+                {
+                    var fresh = MakeCell(shown, n, brush, detail);
+                    _cells[n] = fresh;
+                    WallPanel.Children.Add(fresh.Root);
+                }
+            }
+
+            foreach (var dead in _cells.Keys.Where(k => !seen.Contains(k)).ToList())
+            {
+                WallPanel.Children.Remove(_cells[dead].Root);
+                _cells.Remove(dead);
+            }
+
+            HintText.Text = $"{names.Count} 个抽屉 · 正常 {ok} · 运行 {run} · 异常 {bad}";
+        }
+        finally
         {
-            var (state, detail) = await ProbeAsync(n);
-            Brush brush = state == 0 ? Green : state == 1 ? Yellow : Red;
-            if (state == 0) ok++; else if (state == 1) run++; else bad++;
-            var shown = BoxMeta.DisplayOf(n);
-            WallPanel.Children.Add(MakeCell(shown, n, brush, detail));
+            _refreshing = false;
         }
-
-        HintText.Text = $"{names.Count} 个抽屉 · 正常 {ok} · 运行 {run} · 异常 {bad}";
     }
 
     /// <summary>0=正常(已停) 1=运行中 2=异常</summary>
@@ -105,7 +140,7 @@ public partial class StatusWallWindow : Window
         }
     }
 
-    private FrameworkElement MakeCell(string shown, string real, Brush brush, string detail)
+    private CellView MakeCell(string shown, string real, Brush brush, string detail)
     {
         var stack = new StackPanel { Margin = new Thickness(0, 0, 14, 14), Width = 64, Cursor = Cursors.Hand };
         var cell = new Border
@@ -139,7 +174,7 @@ public partial class StatusWallWindow : Window
         stack.ToolTip = $"{shown}\n{real}\n{detail}";
 
         cell.MouseLeftButtonUp += (_, _) => { _pick(real); Close(); };
-        return stack;
+        return new CellView { Root = stack, Cell = cell, Label = label };
     }
 
     private async void RefreshBtn_Click(object sender, RoutedEventArgs e) => await RefreshAsync();

@@ -63,3 +63,22 @@ function Unregister-Box($name) {
         Write-BoxRegistryRaw @(Read-BoxRegistry | Where-Object { $_.name -ne $name })
     } | Out-Null
 }
+
+
+# 按盒子的跨进程动作锁：CLI 和 GUI 同时操作同一个盒子时，第二个直接失败
+function Lock-BoxAction([string] $Name, [int] $TimeoutMs = 0) {
+    $safe = ($Name -replace '[^A-Za-z0-9_.-]', '_')
+    if (-not $safe) { return $null }
+    $mtx = New-Object System.Threading.Mutex($false, ('Local\drawer-box-' + $safe))
+    try {
+        if ($mtx.WaitOne($TimeoutMs)) { return $mtx }
+    } catch { }
+    try { $mtx.Dispose() } catch { }
+    return $null
+}
+
+function Unlock-BoxAction($Mutex) {
+    if (-not $Mutex) { return }
+    try { $Mutex.ReleaseMutex() } catch { }
+    try { $Mutex.Dispose() } catch { }
+}
