@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -8,7 +8,13 @@
     <AssemblyName>drawer-setup</AssemblyName>
     <RootNamespace>BoxRunSetup</RootNamespace>
     <ApplicationIcon>..\boxrun.ico</ApplicationIcon>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Version>1.0.0</Version>
+    <AssemblyTitle>Drawer Desktop Setup</AssemblyTitle>
+    <Product>Drawer Desktop</Product>
+    <Company>Drawer Desktop contributors</Company>
+    <Description>Installer for Drawer Desktop</Description>
+    <Copyright>MIT License</Copyright>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="payload.zip" Condition="Exists('payload.zip')" />

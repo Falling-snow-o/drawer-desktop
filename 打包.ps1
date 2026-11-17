@@ -76,7 +76,7 @@ Compress-Archive -Path "$stage\*" -DestinationPath $payload -Force
 Write-Host "[5/5] 编译安装包"
 $setupOut = Join-Path $dist 'setup'
 & $dotnet publish (Join-Path $root 'installer\Installer.csproj') -c Release -r win-x64 `
-    --self-contained false -p:PublishSingleFile=true -o $setupOut -v quiet
+    --self-contained false -p:PublishSingleFile=true -p:Version=$Version -o $setupOut -v quiet
 if ($LASTEXITCODE -ne 0) { throw '编译安装包失败' }
 
 Copy-Item (Join-Path $setupOut 'drawer-setup.exe') (Join-Path $dist 'drawer-setup.exe') -Force

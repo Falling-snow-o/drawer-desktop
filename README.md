@@ -1,5 +1,8 @@
 ﻿# Drawer Desktop
 
+[English](README.en.md) · [Code signing policy](CODE_SIGNING_POLICY.md) · [Privacy](PRIVACY.md)
+
+
 > 现状：管理器是 **C# / WPF**（`gui\`），引擎是 `box.ps1`。
 > 安装包：`dist\drawer-setup.exe`（自解压，装到 `%LOCALAPPDATA%\Drawer`）。
 > 卸载：`drawer-setup.exe --uninstall`。
