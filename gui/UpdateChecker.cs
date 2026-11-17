@@ -58,6 +58,8 @@ public static class UpdateChecker
             return;
         }
 
+        body = body.TrimStart('\uFEFF');
+
         string version = "", url = "", sha = "", notes = "";
         try
         {

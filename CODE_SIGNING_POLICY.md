@@ -1,4 +1,4 @@
-# Code signing policy
+﻿# Code signing policy
 
 **Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).**
 
@@ -15,9 +15,9 @@ No third-party binaries are signed by this project. Third-party components are l
 
 | Role | Members |
 |---|---|
-| Authors / committers | `<maintainer GitHub handle>` |
-| Reviewers | `<maintainer GitHub handle>` |
-| Approvers | `<maintainer GitHub handle>` |
+| Authors / committers | `[Falling-snow-o](https://github.com/Falling-snow-o)` |
+| Reviewers | `[Falling-snow-o](https://github.com/Falling-snow-o)` |
+| Approvers | `[Falling-snow-o](https://github.com/Falling-snow-o)` |
 
 For a single-maintainer project, the maintainer holds all roles. Changes from outside contributors require review before merge.
 

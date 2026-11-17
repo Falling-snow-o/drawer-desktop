@@ -1,4 +1,4 @@
-# SignPath Foundation application — draft answers
+﻿# SignPath Foundation application — draft answers
 
 Fill in the bracketed values, paste into <https://signpath.org/apply>, and keep this file updated.
 
@@ -8,9 +8,9 @@ Fill in the bracketed values, paste into <https://signpath.org/apply>, and keep 
 |---|---|
 | Project name | Drawer Desktop |
 | One-line description | Portable WSL2 drawer manager for Windows: disposable Linux environments with snapshots, resource limits and a GUI. |
-| Repository URL | `https://github.com/<owner>/<repo>` |
+| Repository URL | `https://github.com/Falling-snow-o/drawer-desktop` |
 | License | MIT (OSI-approved) |
-| Website / download page | `https://github.com/<owner>/<repo>/releases` |
+| Website / download page | `https://github.com/Falling-snow-o/drawer-desktop/releases` |
 | Language / stack | C# (.NET 8, WPF) + PowerShell engine |
 | Current release | `v<version>` (installer attached to GitHub Releases) |
 | Maintainer | `<name / GitHub handle>` |
@@ -44,9 +44,9 @@ Contains the required sentence:
 
 Roles (single-maintainer project):
 
-- Authors / committers: `<maintainer>`
-- Reviewers: `<maintainer>` (external PRs require review)
-- Approvers: `<maintainer>`
+- Authors / committers: `Falling-snow-o`
+- Reviewers: `Falling-snow-o` (external PRs require review)
+- Approvers: `Falling-snow-o`
 
 ## Privacy
 

@@ -92,10 +92,12 @@ Write-Host ("完成: {0}  ({1:N0} KB)" -f $exe, ((Get-Item $exe).Length / 1KB))
 $setupPath = Join-Path $dist 'drawer-setup.exe'
 $sha = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash.ToLowerInvariant()
 $url = if ($UpdateUrl) { $UpdateUrl } else { $setupPath }
-@{
+$manifestJson = @{
     version = $Version
     url     = $url
     sha256  = $sha
     notes   = ('Drawer ' + $Version)
-} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $dist 'latest.json') -Encoding UTF8
+} | ConvertTo-Json
+$manifestPath = Join-Path $dist 'latest.json'
+[IO.File]::WriteAllText($manifestPath, $manifestJson, (New-Object System.Text.UTF8Encoding($false)))
 Write-Host ('清单: ' + (Join-Path $dist 'latest.json') + '  version=' + $Version)

@@ -1,5 +1,8 @@
 ﻿# Drawer Desktop
 
+Portable WSL2 drawer manager for Windows: one folder = one disposable Linux environment, with snapshots, resource limits and a GUI. [English README](README.en.md)
+
+
 [English](README.en.md) · [Code signing policy](CODE_SIGNING_POLICY.md) · [Privacy](PRIVACY.md)
 
 
