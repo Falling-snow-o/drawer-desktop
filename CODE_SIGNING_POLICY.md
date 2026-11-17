@@ -1,45 +1,43 @@
-﻿# Code signing policy
+# Code signing policy
 
-**Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).**
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
 
-## Scope
+## What gets signed
 
-Only release artifacts built from this repository by the project's GitHub Actions workflow are signed:
+Only release artifacts built from this repository by GitHub Actions:
 
-- `Drawer.exe` (main application)
-- `drawer-setup.exe` (installer)
+- `Drawer.exe`
+- `drawer-setup.exe`
 
-No third-party binaries are signed by this project. Third-party components are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+No third-party binaries are signed. Third-party components are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Roles
 
-| Role | Members |
+| Role | Member |
 |---|---|
-| Authors / committers | `[Falling-snow-o](https://github.com/Falling-snow-o)` |
-| Reviewers | `[Falling-snow-o](https://github.com/Falling-snow-o)` |
-| Approvers | `[Falling-snow-o](https://github.com/Falling-snow-o)` |
+| Author / committer | [Falling-snow-o](https://github.com/Falling-snow-o) |
+| Reviewer | [Falling-snow-o](https://github.com/Falling-snow-o) |
+| Approver | [Falling-snow-o](https://github.com/Falling-snow-o) |
 
-For a single-maintainer project, the maintainer holds all roles. Changes from outside contributors require review before merge.
+Single-maintainer project. External pull requests require review before merge.
 
-> Replace the placeholders above with the actual GitHub team/user links when the public repository is created.
+## Build and signing
 
-## Build and signing process
-
-1. A release is triggered manually through the `release-sign` GitHub Actions workflow with a version input.
-2. The workflow builds the installer from source on a clean Windows runner (`打包.ps1 -SkipTest -Version <version>`).
-3. The unsigned artifact is uploaded and submitted to SignPath for origin verification.
-4. A project approver reviews and approves the signing request in SignPath.
+1. A release is started manually with the `release-sign` workflow and a version input.
+2. The workflow builds the installer from source on a Windows runner (`打包.ps1 -SkipTest -Version <version>`).
+3. The unsigned artifact is submitted to SignPath for origin verification.
+4. An approver reviews and approves the request.
 5. The signed artifact is attached to the GitHub Release.
 
-Local builds are signed only with a self-signed development certificate (`signing/New-DevCert.ps1`) and are not published as releases.
+Local builds use a self-signed certificate (`signing/New-DevCert.ps1`) and are not published as releases.
 
 ## Privacy
 
-See [PRIVACY.md](PRIVACY.md). The application does not transfer data to other systems unless the user configures an update URL or a crash-report URL.
+See [PRIVACY.md](PRIVACY.md). The app sends no data unless the user configures an update URL or crash-report URL.
 
-## Uninstallation
+## Uninstall
 
-The installer registers an uninstall entry and also supports:
+The installer registers an uninstall entry, and also supports:
 
 ```powershell
 drawer-setup.exe --uninstall --quiet
