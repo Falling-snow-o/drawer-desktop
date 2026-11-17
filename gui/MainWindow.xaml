@@ -322,6 +322,7 @@
                 <Separator/>
                 <MenuItem Header="检查更新…" Click="UpdateMenu_Click"/>
                 <MenuItem Header="导出诊断包…" Click="DiagMenu_Click"/>
+                <MenuItem Header="协同…" Click="CollabMenu_Click"/>
               </ContextMenu>
             </Button.ContextMenu>
           </Button>

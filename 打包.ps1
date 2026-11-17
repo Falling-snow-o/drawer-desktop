@@ -43,7 +43,7 @@ if ($LASTEXITCODE -ne 0) { throw '编译 BoxRun 失败' }
 
 Write-Host "[3/5] 收集引擎与资源"
 Copy-Item "$app\*" $stage -Recurse -Force
-foreach ($item in @('box.ps1','boxrun.ico','README.md','PITFALLS.md')) {
+foreach ($item in @('box.ps1','boxrun.ico','README.md','PITFALLS.md','LICENSE','SECURITY.md','THIRD-PARTY-NOTICES.md','COLLAB.md')) {
     Copy-Item (Join-Path $root $item) $stage -Force
 }
 foreach ($dir in @('lib','vram','examples','guest')) {

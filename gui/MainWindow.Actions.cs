@@ -303,6 +303,13 @@ public partial class MainWindow
     }
 
 
+    private void CollabMenu_Click(object sender, RoutedEventArgs e)
+    {
+        var b = SelectedBox;
+        if (b == null) { ShowError("先选一个抽屉"); return; }
+        new CollabWindow(b, args => CaptureAsync(args)) { Owner = this }.ShowDialog();
+    }
+
     private async void DiagMenu_Click(object sender, RoutedEventArgs e)
     {
         try

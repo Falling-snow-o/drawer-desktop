@@ -1,0 +1,50 @@
+﻿<Window x:Class="BoxRun.CollabWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="协同" Width="560" Height="480"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize" ShowInTaskbar="False"
+        Background="#F2F2F7" Foreground="#1D1D1F"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">
+  <Grid Margin="20">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <StackPanel>
+      <TextBlock x:Name="HeadText" Text="协同" FontSize="22" FontWeight="Bold"/>
+      <TextBlock Text="data/ 用 git 协作；环境用包清单补装" Foreground="#86868B" FontSize="11" Margin="0,4,0,0"/>
+    </StackPanel>
+
+    <Grid Grid.Row="1" Margin="0,14,0,10">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <TextBox x:Name="RemoteBox" Height="30" VerticalContentAlignment="Center"
+               ToolTip="远端地址（本地裸仓库路径或 git URL）"/>
+      <Button Grid.Column="1" Content="初始化" Padding="14,6" Margin="8,0,0,0"
+              BorderThickness="0" Background="#E9E9ED" Click="InitBtn_Click"/>
+    </Grid>
+
+    <Border Grid.Row="2" Background="#FFFFFF" CornerRadius="12" Padding="10">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <TextBox x:Name="OutBox" BorderThickness="0" Background="Transparent"
+                 FontFamily="Cascadia Mono, Consolas" FontSize="11.5"
+                 IsReadOnly="True" TextWrapping="Wrap"/>
+      </ScrollViewer>
+    </Border>
+
+    <Grid Grid.Row="3" Margin="0,10,0,0">
+      <StackPanel Orientation="Horizontal">
+        <Button Content="状态" Padding="14,6" BorderThickness="0" Background="#E9E9ED" Click="StatusBtn_Click"/>
+        <Button Content="同步" Padding="14,6" Margin="8,0,0,0" BorderThickness="0" Background="#E9E9ED" Click="SyncBtn_Click"/>
+        <Button Content="合并分支" Padding="14,6" Margin="8,0,0,0" BorderThickness="0" Background="#E9E9ED" Click="MergeBtn_Click"/>
+      </StackPanel>
+      <Button Content="关闭" HorizontalAlignment="Right" Padding="14,6"
+              BorderThickness="0" Background="#E9E9ED" IsCancel="True" Click="CloseBtn_Click"/>
+    </Grid>
+  </Grid>
+</Window>
