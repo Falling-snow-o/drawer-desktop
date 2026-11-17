@@ -545,15 +545,22 @@ powershell -NoProfile -ExecutionPolicy Bypass -File test\ci.ps1         # 语法
 
 ## 发布、更新与回滚
 
-### 签名
+### 签名（免费方案）
 
 ```powershell
-# 用证书指纹（CurrentUser\My 里的代码签名证书）
-powershell -File 打包.ps1 -Version 1.1.0 -Sign -CertThumbprint <SHA1指纹>
+# 1) 只做一次：生成本机自签名证书
+powershell -File signing\New-DevCert.ps1
+
+# 2) 打包并签名
+powershell -File 打包.ps1 -Version 1.2.0 -Sign -CertThumbprint <指纹>
 ```
 
-- 自签名证书只能做本地验证（`Get-AuthenticodeSignature` 状态会是 `UnknownError`）
-- 对外发布需要受信任的代码签名证书；签名不会自动加时间戳
+用户每台机器运行一次 `signing\Trust-DevCert.ps1` 即可让签名变为 `Valid`（不需要管理员）。
+详见 [signing/README.md](signing/README.md)。
+
+- 自签名只对信任过的机器生效；公开分发仍会提示未知发布者
+- 完全免费且公开可信的路径只有 [SignPath Foundation](https://signpath.io)（开源项目审核制）
+- 商业分发可买 OV 证书（约 ¥600/年 起）
 - 未提供 `-Sign` 时仍可打包，但 Windows 会提示未知发布者
 
 ### 更新清单
