@@ -1,0 +1,13 @@
+﻿# 构建产物
+dist/
+installer/payload.zip
+
+# .NET
+bin/
+obj/
+*.user
+
+# 本地工具
+.vs/
+.idea/
+*.log

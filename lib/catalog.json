@@ -1,0 +1,159 @@
+﻿{
+    "clean":  [
+                  {
+                      "id":  "apt-cache",
+                      "name":  "APT 下载缓存",
+                      "size":  "100-500 MB",
+                      "desc":  "已下载的 .deb 包，删了不影响已装软件",
+                      "cmd":  "apt-get clean"
+                  },
+                  {
+                      "id":  "apt-lists",
+                      "name":  "APT 索引",
+                      "size":  "20-80 MB",
+                      "desc":  "包列表缓存，下次 apt update 会重建",
+                      "cmd":  "rm -rf /var/lib/apt/lists/*"
+                  },
+                  {
+                      "id":  "tmp",
+                      "name":  "临时文件",
+                      "size":  "不定",
+                      "desc":  "/tmp 下所有文件（正在跑的程序可能用到）",
+                      "cmd":  "find /tmp -mindepth 1 -maxdepth 1 ! -name \u0027boxrun-*\u0027 -exec rm -rf {} + 2\u003e/dev/null"
+                  },
+                  {
+                      "id":  "pip",
+                      "name":  "pip 缓存",
+                      "size":  "10-200 MB",
+                      "desc":  "Python 包下载缓存",
+                      "cmd":  "rm -rf /root/.cache/pip"
+                  },
+                  {
+                      "id":  "npm",
+                      "name":  "npm 缓存",
+                      "size":  "10-300 MB",
+                      "desc":  "Node 包下载缓存",
+                      "cmd":  "rm -rf /root/.npm"
+                  },
+                  {
+                      "id":  "journal",
+                      "name":  "系统日志",
+                      "size":  "10-200 MB",
+                      "desc":  "systemd 日志压到 20 MB",
+                      "cmd":  "journalctl --vacuum-size=20M"
+                  },
+                  {
+                      "id":  "thumbs",
+                      "name":  "缩略图缓存",
+                      "size":  "小",
+                      "desc":  "文件管理器缩略图",
+                      "cmd":  "rm -rf /root/.cache/thumbnails"
+                  },
+                  {
+                      "id":  "locale",
+                      "name":  "多余语言包",
+                      "size":  "10-50 MB",
+                      "desc":  "保留中文和英文，删其它 locale",
+                      "cmd":  "rm -rf /usr/share/locale/* 2\u003e/dev/null; mkdir -p /usr/share/locale"
+                  }
+              ],
+    "install":  [
+                    {
+                        "id":  "dev",
+                        "name":  "开发基础",
+                        "size":  "约 250 MB",
+                        "desc":  "build-essential git curl wget",
+                        "apt":  "build-essential git curl wget"
+                    },
+                    {
+                        "id":  "python",
+                        "name":  "Python",
+                        "size":  "约 120 MB",
+                        "desc":  "python3 + pip + venv",
+                        "apt":  "python3 python3-pip python3-venv"
+                    },
+                    {
+                        "id":  "node",
+                        "name":  "Node.js",
+                        "size":  "约 100 MB",
+                        "desc":  "nodejs + npm",
+                        "apt":  "nodejs npm"
+                    },
+                    {
+                        "id":  "filemgr",
+                        "name":  "文件管理器",
+                        "size":  "约 40 MB",
+                        "desc":  "pcmanfm（图形界面按钮用）",
+                        "apt":  "pcmanfm"
+                    },
+                    {
+                        "id":  "desktop",
+                        "name":  "桌面",
+                        "size":  "约 400 MB",
+                        "desc":  "xfce4 + Xephyr（桌面按钮用）",
+                        "apt":  "xfce4 xserver-xephyr x11-utils arc-theme papirus-icon-theme picom xclip pulseaudio-utils xfce4-pulseaudio-plugin"
+                    },
+                    {
+                        "id":  "ssh",
+                        "name":  "SSH 服务",
+                        "size":  "约 15 MB",
+                        "desc":  "openssh-server",
+                        "apt":  "openssh-server"
+                    },
+                    {
+                        "id":  "docker",
+                        "name":  "Docker",
+                        "size":  "约 500 MB",
+                        "desc":  "docker.io（箱内跑容器）",
+                        "apt":  "docker.io"
+                    },
+                    {
+                        "id":  "wslu",
+                        "name":  "WSL 实用工具 (wslu)",
+                        "size":  "约 1 MB",
+                        "desc":  "wslview / wslpath / wslfetch，方便箱内打开 Windows 浏览器与路径互转"
+                    }
+                ],
+    "plugin":  [
+                   {
+                       "id":  "py-ds",
+                       "name":  "Python 数据科学",
+                       "size":  "约 400 MB",
+                       "desc":  "numpy pandas matplotlib jupyter",
+                       "apt":  "python3-pip python3-venv",
+                       "post":  "pip3 install --break-system-packages numpy pandas matplotlib jupyterlab"
+                   },
+                   {
+                       "id":  "node-dev",
+                       "name":  "Node 开发",
+                       "size":  "约 150 MB",
+                       "desc":  "nodejs npm pnpm",
+                       "apt":  "nodejs npm",
+                       "post":  "npm install -g pnpm"
+                   },
+                   {
+                       "id":  "desktop",
+                       "name":  "XFCE 桌面",
+                       "size":  "约 400 MB",
+                       "desc":  "和「桌面」按钮同一套组件",
+                       "apt":  "xfce4 xserver-xephyr x11-utils arc-theme papirus-icon-theme picom",
+                       "post":  ""
+                   },
+                   {
+                       "id":  "sshd",
+                       "name":  "SSH 远程登录",
+                       "size":  "约 15 MB",
+                       "desc":  "装 openssh-server 并开机自启",
+                       "apt":  "openssh-server",
+                       "post":  "systemctl enable --now ssh"
+                   },
+                   {
+                       "id":  "jupyter",
+                       "name":  "JupyterLab",
+                       "size":  "约 500 MB",
+                       "desc":  "浏览器里的 Notebook",
+                       "apt":  "python3-pip python3-venv",
+                       "post":  "pip3 install --break-system-packages jupyterlab"
+                   }
+               ]
+}

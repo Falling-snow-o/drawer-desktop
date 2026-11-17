@@ -1,0 +1,29 @@
+{
+  "sources": [
+    {
+      "id": "github",
+      "name": "GitHub 官方（raw）",
+      "url": "https://raw.githubusercontent.com/YOUR_NAME/drawer-catalog/main/catalog.json"
+    },
+    {
+      "id": "jsdelivr",
+      "name": "jsDelivr CDN（国内通常更快）",
+      "url": "https://cdn.jsdelivr.net/gh/YOUR_NAME/drawer-catalog@main/catalog.json"
+    },
+    {
+      "id": "ghproxy",
+      "name": "ghproxy 加速镜像",
+      "url": "https://ghproxy.net/https://raw.githubusercontent.com/YOUR_NAME/drawer-catalog/main/catalog.json"
+    },
+    {
+      "id": "gitee",
+      "name": "Gitee 镜像（国内）",
+      "url": "https://gitee.com/YOUR_NAME/drawer-catalog/raw/main/catalog.json"
+    },
+    {
+      "id": "custom",
+      "name": "自定义地址",
+      "url": ""
+    }
+  ]
+}

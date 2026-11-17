@@ -1,0 +1,20 @@
+<Window x:Class="BoxRun.RestoreDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="恢复初始" Width="440" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        ShowInTaskbar="False" Background="#F2F2F7" Foreground="#1D1D1F"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">
+  <StackPanel Margin="22">
+    <TextBlock x:Name="HeadText" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
+    <TextBlock Margin="0,10,0,0" Foreground="#6E6E73" TextWrapping="Wrap"
+               Text="恢复会注销当前系统并重建，data/ 和 downloads/ 不动。"/>
+
+    <Button x:Name="FullBtn" Content="全部清除并重建（推荐）" Margin="0,18,0,0"
+            HorizontalAlignment="Stretch" Click="FullBtn_Click"/>
+    <Button x:Name="KeepBtn" Content="保留桌面重建（重新预装桌面组件）" Margin="0,8,0,0"
+            HorizontalAlignment="Stretch" Click="KeepBtn_Click"/>
+    <Button x:Name="CancelBtn" Content="取消" Margin="0,8,0,0" IsCancel="True"
+            HorizontalAlignment="Stretch" Click="CancelBtn_Click"/>
+  </StackPanel>
+</Window>
