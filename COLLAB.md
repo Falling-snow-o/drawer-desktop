@@ -1,4 +1,4 @@
-# 协同模式（草案 + 实现说明）
+﻿# 协同模式（草案 + 实现说明）
 
 ## 目标
 
@@ -57,3 +57,24 @@ box.ps1 collab lab merge feature/xxx
 - 不做系统层三方合并（不可能可靠）
 - 不做并发写同一抽屉（WSL 单实例，多人同时改会互相覆盖）
 - 不替代代码托管：远端就是普通 git 仓库（GitHub/Gitee/本地裸仓库都行）
+
+## 完整 git 动作
+
+```powershell
+box.ps1 collab lab clone <远端>          # data/ 从远端克隆
+box.ps1 collab lab remote [url]          # 查看/设置 remote
+box.ps1 collab lab fetch                 # 抓取
+box.ps1 collab lab pull                  # 拉取（rebase）
+box.ps1 collab lab push                  # 推送
+box.ps1 collab lab commit -m "说明"      # 提交
+box.ps1 collab lab branch                # 列出分支
+box.ps1 collab lab branch -c feature     # 新建并切换
+box.ps1 collab lab branch feature        # 切换
+box.ps1 collab lab log [N]               # 最近 N 条
+box.ps1 collab lab diff                  # 工作区/暂存/冲突
+box.ps1 collab lab stash [list|pop]      # 贮藏/恢复
+box.ps1 collab lab tag [名字]            # 列出/打标签
+box.ps1 collab lab merge <分支>          # 合并远端分支
+```
+
+界面入口：面板 → 协同…，上述动作都有按钮。

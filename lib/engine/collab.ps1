@@ -206,6 +206,138 @@ function Invoke-Collab {
             }
         }
 
+        'clone' {
+            $remote = if ($Rest.Count -gt 1) { [string]$Rest[1] } else { '' }
+            if (-not $remote) { Write-Bad '用法: collab <box> clone <远端地址>'; return }
+            if (Test-Path -LiteralPath (Join-Path $data '.git')) { Write-Bad 'data/ 已经是 git 仓库，用 remote 改远端'; return }
+
+            $r = Invoke-CollabGit $data @('init', '-q')
+            Invoke-CollabGit $data @('config', 'user.name', 'Drawer Collab') | Out-Null
+            Invoke-CollabGit $data @('config', 'user.email', 'collab@localhost') | Out-Null
+            Invoke-CollabGit $data @('remote', 'add', 'origin', $remote) | Out-Null
+
+            $r = Invoke-CollabGit $data @('fetch', 'origin')
+            if ($r.Code -ne 0) { Write-Bad ("fetch 失败: " + ($r.Out -join "`n")); return }
+
+            $refs = Invoke-CollabGit $data @('branch', '-r')
+            $hasMaster = ($refs.Out -join "`n") -match 'origin/master'
+            $hasMain = ($refs.Out -join "`n") -match 'origin/main'
+            if ($hasMaster) {
+                $r = Invoke-CollabGit $data @('checkout', '-b', 'master', 'origin/master')
+            } elseif ($hasMain) {
+                $r = Invoke-CollabGit $data @('checkout', '-b', 'master', 'origin/main')
+            } else {
+                Write-Dim '远端为空，保留空仓库'
+                $r = [pscustomobject]@{ Code = 0; Out = @() }
+            }
+            if ($r.Code -ne 0) { Write-Bad ("checkout 失败: " + ($r.Out -join "`n")); return }
+            Write-Ok ("已从远端克隆到 data/: " + $remote)
+            Save-CollabManifest $cfg | Out-Null
+        }
+
+        'branch' {
+            $sub = if ($Rest.Count -gt 1) { [string]$Rest[1] } else { '' }
+            if (-not $sub) {
+                $cur = Invoke-CollabGit $data @('branch', '--show-current')
+                $all = Invoke-CollabGit $data @('branch', '-a')
+                foreach ($l in $all.Out) {
+                    $mark = if ($l.TrimStart('* ').Trim() -eq $cur.Out) { '* ' } else { '  ' }
+                    Write-Host ($mark + $l.TrimStart('* ').Trim())
+                }
+                return
+            }
+            if ($sub -eq '-c' -and $Rest.Count -gt 2) {
+                $n = [string]$Rest[2]
+                $r = Invoke-CollabGit $data @('checkout', '-b', $n)
+            } else {
+                $r = Invoke-CollabGit $data @('checkout', $sub)
+            }
+            if ($r.Code -ne 0) { Write-Bad ($r.Out -join "`n") } else { Write-Ok '分支已切换' }
+        }
+
+        'commit' {
+            $msg = 'drawer: commit'
+            for ($i = 1; $i -lt $Rest.Count; $i++) {
+                if ($Rest[$i] -eq '-m' -and $i + 1 -lt $Rest.Count) { $msg = [string]$Rest[$i + 1]; $i++ }
+            }
+            Invoke-CollabGit $data @('add', '-A') | Out-Null
+            $r = Invoke-CollabGit $data @('commit', '-q', '-m', $msg)
+            if ($r.Code -eq 0) { Write-Ok ("已提交: " + $msg) }
+            elseif (($r.Out -join "`n") -match 'nothing to commit') { Write-Dim '没有需要提交的改动' }
+            else { Write-Bad ($r.Out -join "`n") }
+        }
+
+        'fetch' {
+            $r = Invoke-CollabGit $data @('fetch', '--all', '--prune')
+            if ($r.Code -ne 0) { Write-Bad ($r.Out -join "`n") } else { Write-Ok '已抓取远端' }
+        }
+
+        'pull' {
+            $br = Invoke-CollabGit $data @('branch', '--show-current')
+            $r = Invoke-CollabGit $data @('pull', '--rebase', 'origin', $br.Out)
+            if ($r.Code -ne 0) { Write-Bad ($r.Out -join "`n") } else { Write-Ok '已拉取' }
+        }
+
+        'push' {
+            $br = Invoke-CollabGit $data @('branch', '--show-current')
+            $r = Invoke-CollabGit $data @('push', '-u', 'origin', $br.Out)
+            if ($r.Code -ne 0) { Write-Bad ($r.Out -join "`n") } else { Write-Ok '已推送' }
+        }
+
+        'log' {
+            $n = 20
+            if ($Rest.Count -gt 1 -and $Rest[1] -match '^\d+$') { $n = [int]$Rest[1] }
+            $r = Invoke-CollabGit $data @('log', '--oneline', '--decorate', '-n', [string]$n)
+            foreach ($l in $r.Out) { Write-Host $l }
+        }
+
+        'diff' {
+            $s = Invoke-CollabGit $data @('status', '--short')
+            if ($s.Out) { Write-Step '工作区改动'; foreach ($l in $s.Out) { Write-Host $l } } else { Write-Dim '工作区干净' }
+            $d = Invoke-CollabGit $data @('diff', '--stat')
+            if ($d.Out) { Write-Step '未暂存差异'; foreach ($l in $d.Out) { Write-Host $l } }
+            $d2 = Invoke-CollabGit $data @('diff', '--cached', '--stat')
+            if ($d2.Out) { Write-Step '已暂存差异'; foreach ($l in $d2.Out) { Write-Host $l } }
+            $c = Invoke-CollabGit $data @('diff', '--name-only', '--diff-filter=U')
+            if ($c.Out) { Write-Warn '有冲突文件:'; foreach ($l in $c.Out) { Write-Host ("  ! " + $l) } }
+        }
+
+        'stash' {
+            $sub = if ($Rest.Count -gt 1) { [string]$Rest[1] } else { 'push' }
+            switch ($sub) {
+                'list' { $r = Invoke-CollabGit $data @('stash', 'list'); foreach ($l in $r.Out) { Write-Host $l } }
+                'pop'  { $r = Invoke-CollabGit $data @('stash', 'pop'); if ($r.Code -ne 0) { Write-Bad ($r.Out -join "`n") } else { Write-Ok '已恢复贮藏' } }
+                default {
+                    $r = Invoke-CollabGit $data @('stash', 'push', '-u', '-m', ('drawer ' + (Get-Date -Format 'HH:mm:ss')))
+                    if ($r.Code -ne 0) { Write-Bad ($r.Out -join "`n") } else { Write-Ok '已贮藏当前改动' }
+                }
+            }
+        }
+
+        'tag' {
+            $name = if ($Rest.Count -gt 1) { [string]$Rest[1] } else { '' }
+            if (-not $name) {
+                $r = Invoke-CollabGit $data @('tag', '-n')
+                foreach ($l in $r.Out) { Write-Host $l }
+                return
+            }
+            $r = Invoke-CollabGit $data @('tag', $name)
+            if ($r.Code -ne 0) { Write-Bad ($r.Out -join "`n") } else { Write-Ok ('已打标签: ' + $name) }
+        }
+
+        'remote' {
+            $url = if ($Rest.Count -gt 1) { [string]$Rest[1] } else { '' }
+            if ($url) {
+                $existing = Invoke-CollabGit $data @('remote', 'get-url', 'origin')
+                if ($existing.Code -eq 0) { Invoke-CollabGit $data @('remote', 'set-url', 'origin', $url) | Out-Null }
+                else { Invoke-CollabGit $data @('remote', 'add', 'origin', $url) | Out-Null }
+                Write-Ok ('远端已设为: ' + $url)
+            } else {
+                $r = Invoke-CollabGit $data @('remote', '-v')
+                if ($r.Out) { foreach ($l in $r.Out) { Write-Host $l } } else { Write-Dim '未配置远端' }
+            }
+        }
+
         default {
             Write-Bad ("未知 collab 动作: " + $action)
             Write-Dim '可用: init / status / sync / env-save / env-diff / env-apply / merge'
