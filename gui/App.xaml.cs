@@ -34,6 +34,10 @@ public partial class App : System.Windows.Application
     {
         // 安装器/脚本用它请求优雅退出（不弹托盘、不杀进程）
         var argv = Environment.GetCommandLineArgs();
+
+        // 测试钩子：--crash-test 触发一次未处理异常，用于验证崩溃报告
+        if (Array.Exists(argv, a => string.Equals(a, "--crash-test", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("drawer crash test");
         if (Array.Exists(argv, a => string.Equals(a, "--quit", StringComparison.OrdinalIgnoreCase)))
         {
             try { using var q = EventWaitHandle.OpenExisting(QuitName); q.Set(); } catch { }
@@ -109,11 +113,46 @@ public partial class App : System.Windows.Application
 
     private static void Dump(Exception ex)
     {
+        string path = null;
+        string text = "";
         try
         {
-            File.WriteAllText(
-                Path.Combine(Path.GetTempPath(), "drawer-crash.log"),
-                DateTime.Now + "\r\n" + (ex?.ToString() ?? "unknown"));
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".boxrun", "crashes");
+            Directory.CreateDirectory(dir);
+            path = Path.Combine(dir, "crash-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" +
+                                     Environment.ProcessId + ".txt");
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Drawer Desktop crash report");
+            sb.AppendLine("time: " + DateTime.Now.ToString("s"));
+            sb.AppendLine("app: " + (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?"));
+            sb.AppendLine("os: " + Environment.OSVersion);
+            sb.AppendLine("dotnet: " + Environment.Version);
+            sb.AppendLine("args: " + string.Join(' ', Environment.GetCommandLineArgs()));
+            sb.AppendLine(new string('-', 60));
+            sb.AppendLine(ex?.ToString() ?? "unknown");
+            text = sb.ToString();
+            File.WriteAllText(path, text);
+
+            // 兼容旧位置，方便既有诊断脚本
+            File.WriteAllText(Path.Combine(Path.GetTempPath(), "drawer-crash.log"), text);
+        }
+        catch { }
+
+        try
+        {
+            var settings = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".boxrun", "settings.json");
+            if (!File.Exists(settings)) return;
+            var url = "";
+            using (var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(settings)))
+                if (doc.RootElement.TryGetProperty("crashUrl", out var u)) url = u.GetString() ?? "";
+            if (string.IsNullOrWhiteSpace(url)) return;
+
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            var content = new System.Net.Http.StringContent(text, System.Text.Encoding.UTF8, "text/plain");
+            http.PostAsync(url, content).GetAwaiter().GetResult();
         }
         catch { }
     }

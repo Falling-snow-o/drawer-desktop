@@ -19,7 +19,7 @@ internal static class Program
     {
         var dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Drawer");
-        bool shortcuts = true, uninstall = false, quiet = false, force = false, fromTemp = false;
+        bool shortcuts = true, uninstall = false, rollback = false, quiet = false, force = false, fromTemp = false, restart = false;
         bool dirGiven = false;
 
         for (int i = 0; i < args.Length; i++)
@@ -29,25 +29,28 @@ internal static class Program
                 case "--dir": if (i + 1 < args.Length) { dir = Path.GetFullPath(args[++i]); dirGiven = true; } break;
                 case "--no-shortcuts": shortcuts = false; break;
                 case "--uninstall": uninstall = true; break;
+                case "--rollback": rollback = true; break;
                 case "--quiet": quiet = true; break;
                 case "--force": force = true; break;
                 case "--from-temp": fromTemp = true; break;
+                case "--restart": restart = true; break;
             }
         }
 
         try
         {
             if (uninstall) { RunUninstall(dir, shortcuts, quiet, fromTemp); return; }
+            if (rollback) { RunRollback(dir, quiet, fromTemp); return; }
             if (!quiet && !dirGiven)
             {
                 using var f = new OptionsForm(dir);
                 if (f.ShowDialog() != DialogResult.OK) return;
                 dir = f.InstallDir;
                 shortcuts = f.Shortcuts;
-                RunInstall(dir, shortcuts, quiet, force, f.Autostart);
+                RunInstall(dir, shortcuts, quiet, force, f.Autostart, false);
                 return;
             }
-            RunInstall(dir, shortcuts, quiet, force, true);
+            RunInstall(dir, shortcuts, quiet, force, true, restart);
         }
         catch (Exception ex)
         {
@@ -58,13 +61,15 @@ internal static class Program
         }
     }
 
-    private static void RunInstall(string dir, bool shortcuts, bool quiet, bool force, bool autostart)
+    private static void RunInstall(string dir, bool shortcuts, bool quiet, bool force, bool autostart, bool restart = false)
     {
         if (!force && !HasDotNet8(quiet)) return;
         if (!quiet) CheckWsl();
 
         // 覆盖安装前必须先停掉运行中的管理器，否则 exe 被占用
         if (!EnsureStopped(dir, quiet)) { Environment.ExitCode = 1; return; }
+
+        BackupInstall(dir);
 
         var asm = Assembly.GetExecutingAssembly();
         var names = asm.GetManifestResourceNames();
@@ -101,6 +106,11 @@ internal static class Program
         WriteUninstallEntry(dir);
         if (autostart) WriteAutostart(dir);
         Log("installed to " + dir);
+
+        if (restart)
+        {
+            try { Process.Start(new ProcessStartInfo(Path.Combine(dir, "Drawer.exe")) { UseShellExecute = true }); } catch { }
+        }
 
         if (quiet) return;
 
@@ -248,6 +258,72 @@ internal static class Program
             k.SetValue("NoRepair", 1, RegistryValueKind.DWord);
         }
         catch { }
+    }
+
+    private static string BackupDir(string dir) => dir.TrimEnd('\\') + ".backup";
+
+    private static void CopyDir(string src, string dst)
+    {
+        Directory.CreateDirectory(dst);
+        foreach (var f in Directory.GetFiles(src))
+            File.Copy(f, Path.Combine(dst, Path.GetFileName(f)), true);
+        foreach (var d in Directory.GetDirectories(src))
+            CopyDir(d, Path.Combine(dst, Path.GetFileName(d)));
+    }
+
+    private static void BackupInstall(string dir)
+    {
+        try
+        {
+            if (!Directory.Exists(dir) || !File.Exists(Path.Combine(dir, "Drawer.exe"))) return;
+            var backup = BackupDir(dir);
+            if (Directory.Exists(backup)) Directory.Delete(backup, true);
+            CopyDir(dir, backup);
+            Log("backup: " + backup);
+        }
+        catch (Exception ex) { Log("backup failed: " + ex.Message); }
+    }
+
+    private static void RunRollback(string dir, bool quiet, bool fromTemp)
+    {
+        var self = Environment.ProcessPath;
+        if (!fromTemp && self != null && self.StartsWith(dir, StringComparison.OrdinalIgnoreCase))
+        {
+            var tmp = Path.Combine(Path.GetTempPath(), "drawer-rollback-" + Guid.NewGuid().ToString("N") + ".exe");
+            File.Copy(self, tmp, true);
+            var q = quiet ? " --quiet" : "";
+            Process.Start(tmp, $"--rollback --dir \"{dir}\"{q} --from-temp");
+            return;
+        }
+
+        var backup = BackupDir(dir);
+        if (!Directory.Exists(backup))
+        {
+            Log("rollback: no backup");
+            if (!quiet) MessageBox.Show("没有可回滚的备份。", "Drawer Desktop");
+            Environment.ExitCode = 1;
+            return;
+        }
+
+        if (!EnsureStopped(dir, quiet)) { Environment.ExitCode = 1; return; }
+
+        try
+        {
+            try { Directory.SetCurrentDirectory(Path.GetTempPath()); } catch { }
+
+            // 直接覆盖回备份：不删除目录，避免被占用/权限问题卡住
+            CopyDir(backup, dir);
+            Log("rollback: restored " + backup);
+            var exe = Path.Combine(dir, "Drawer.exe");
+            if (File.Exists(exe)) Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
+            if (!quiet) MessageBox.Show("已回滚到上一个版本。", "Drawer Desktop");
+        }
+        catch (Exception ex)
+        {
+            Log("rollback FAIL " + ex);
+            Environment.ExitCode = 1;
+            if (!quiet) MessageBox.Show("回滚失败：\n\n" + ex.Message, "Drawer Desktop");
+        }
     }
 
     private static void RunUninstall(string dir, bool shortcuts, bool quiet, bool fromTemp)

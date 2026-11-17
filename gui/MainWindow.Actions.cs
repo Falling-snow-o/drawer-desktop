@@ -328,6 +328,11 @@ public partial class MainWindow
                 foreach (var f in Directory.GetFiles(LogDir))
                     File.Copy(f, Path.Combine(tmp, "log-" + Path.GetFileName(f)), true);
 
+            var crashes = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".boxrun", "crashes");
+            if (Directory.Exists(crashes))
+                foreach (var f in Directory.GetFiles(crashes))
+                    File.Copy(f, Path.Combine(tmp, "crash-" + Path.GetFileName(f)), true);
+
             var meta = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".boxrun");
             foreach (var name in new[] { "settings.json", "boxes.json", "aliases.json", "tags.json" })
             {

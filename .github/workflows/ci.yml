@@ -1,5 +1,14 @@
-﻿name: ci
-on: [push, pull_request]
+name: ci
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   static-and-build:
@@ -12,3 +21,22 @@ jobs:
       - name: PowerShell 语法 + 编译
         shell: pwsh
         run: ./test/ci.ps1
+
+  package:
+    runs-on: windows-latest
+    needs: static-and-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      # 托管 runner 没有嵌套虚拟化，WSL 冒烟只能在本地跑；这里只打包
+      - name: 打包（跳过 WSL 冒烟）
+        shell: pwsh
+        run: ./打包.ps1 -SkipTest -Version "${{ github.run_number }}.0"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drawer-setup
+          path: |
+            dist/drawer-setup.exe
+            dist/latest.json

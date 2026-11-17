@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -12,6 +12,27 @@ namespace BoxRun;
 /// <summary>无签名的轻量更新：读 latest.json → 下载 → sha256 校验 → 静默安装 → 重启。</summary>
 public static class UpdateChecker
 {
+    private static bool TryLocal(string url, out string path)
+    {
+        path = null;
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        try
+        {
+            if (url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+            {
+                path = new Uri(url).LocalPath;
+                return File.Exists(path);
+            }
+            if (url.IndexOf("://", StringComparison.Ordinal) < 0 && File.Exists(url))
+            {
+                path = url;
+                return true;
+            }
+        }
+        catch { }
+        return false;
+    }
+
     public static async Task CheckAsync(Window owner, string manifestUrl)
     {
         if (string.IsNullOrWhiteSpace(manifestUrl))
@@ -23,8 +44,13 @@ public static class UpdateChecker
         string body;
         try
         {
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-            body = await http.GetStringAsync(manifestUrl);
+            if (TryLocal(manifestUrl, out var localManifest))
+                body = await File.ReadAllTextAsync(localManifest);
+            else
+            {
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                body = await http.GetStringAsync(manifestUrl);
+            }
         }
         catch (Exception ex)
         {
@@ -73,9 +99,25 @@ public static class UpdateChecker
 
         try
         {
-            using (var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) })
-            using (var resp = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+            if (TryLocal(url, out var localFile))
             {
+                await using var src = File.OpenRead(localFile);
+                await using var dst = File.Create(tmp);
+                var total = src.Length;
+                var buf = new byte[81920];
+                long done = 0;
+                int n;
+                while ((n = await src.ReadAsync(buf)) > 0)
+                {
+                    await dst.WriteAsync(buf.AsMemory(0, n));
+                    done += n;
+                    win.SetProgress(total > 0 ? done * 100.0 / total : -1, done);
+                }
+            }
+            else
+            {
+                using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+                using var resp = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
                 resp.EnsureSuccessStatusCode();
                 var total = resp.Content.Headers.ContentLength ?? -1;
                 await using var src = await resp.Content.ReadAsStreamAsync();
@@ -103,13 +145,9 @@ public static class UpdateChecker
             win.SetProgress(100, 0);
             win.Close();
 
-            Process.Start(new ProcessStartInfo(tmp, "--quiet") { UseShellExecute = true });
-            await Task.Delay(2500);
-
-            var exe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Drawer", "Drawer.exe");
-            if (File.Exists(exe))
-                Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
+            // 安装器负责停掉本进程、覆盖安装、再重启；这里直接退出即可
+            Process.Start(new ProcessStartInfo(tmp, "--quiet --restart") { UseShellExecute = true });
+            await Task.Delay(600);
             Application.Current.Shutdown();
         }
         catch (Exception ex)

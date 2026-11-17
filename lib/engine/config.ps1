@@ -109,7 +109,7 @@ function Get-BoxConfig {
 
 function Get-Settings {
     $p = Join-Path $env:USERPROFILE '.boxrun\settings.json'
-    $def = [pscustomobject]@{ version = 1; mirror = 'tuna'; useBase = $true; aptCache = $true; restic = $false; updateUrl = '' }
+    $def = [pscustomobject]@{ version = 1; mirror = 'tuna'; useBase = $true; aptCache = $true; restic = $false; updateUrl = ''; crashUrl = '' }
     if (-not (Test-Path -LiteralPath $p)) { return $def }
     try {
         $s = Get-Content -LiteralPath $p -Raw -Encoding UTF8 | ConvertFrom-Json

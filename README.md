@@ -542,3 +542,49 @@ powershell -NoProfile -ExecutionPolicy Bypass -File test\ci.ps1         # 语法
 
 `settings.json` 带 `version: 1`；保存设置时会保留未知字段，方便以后升级。
 `box.yaml` 模板带 `schema: 1`，引擎对未知字段容忍。
+
+## 发布、更新与回滚
+
+### 签名
+
+```powershell
+# 用证书指纹（CurrentUser\My 里的代码签名证书）
+powershell -File 打包.ps1 -Version 1.1.0 -Sign -CertThumbprint <SHA1指纹>
+```
+
+- 自签名证书只能做本地验证（`Get-AuthenticodeSignature` 状态会是 `UnknownError`）
+- 对外发布需要受信任的代码签名证书；签名不会自动加时间戳
+- 未提供 `-Sign` 时仍可打包，但 Windows 会提示未知发布者
+
+### 更新清单
+
+打包会生成 `dist\latest.json`：
+
+```json
+{ "version": "1.1.0", "url": "https://…/drawer-setup.exe", "sha256": "…", "notes": "…" }
+```
+
+- 本地测试时 `url` 可以直接是 `D:\…\drawer-setup.exe` 或 `file:///…`
+- 设置里的「更新源」填 `latest.json` 的路径/URL
+- 流程：下载 → sha256 校验 → 启动安装器 `--quiet --restart` → 安装器停进程、备份、覆盖、重启
+
+### 回滚
+
+安装器覆盖安装前会把当前目录备份到 `%LOCALAPPDATA%\Drawer.backup`：
+
+```powershell
+& "$env:LOCALAPPDATA\Drawer\drawer-setup.exe" --rollback --quiet
+```
+
+回滚会停掉进程、用备份覆盖、再启动应用。
+
+### 崩溃报告
+
+- 未处理异常写到 `%USERPROFILE%\.boxrun\crashes\crash-*.txt`
+- 设置里填「崩溃上报地址」后，会额外 POST 一份纯文本到该地址
+- 「导出诊断包」会自动带上 crashes 目录
+
+### CI
+
+- 托管 runner：`.github/workflows/ci.yml` 跑语法检查、编译、打包（跳过 WSL 冒烟）
+- 本地完整回归：`test\smoke.ps1`、`test\collab-smoke.ps1`、`test\gui-smoke.ps1`

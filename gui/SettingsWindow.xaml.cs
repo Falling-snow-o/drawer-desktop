@@ -22,6 +22,7 @@ public partial class SettingsWindow : Window
         string mirror = "tuna";
         bool useBase = true, aptCache = true, restic = false;
         string updateUrl = "";
+        string crashUrl = "";
 
         try
         {
@@ -34,6 +35,7 @@ public partial class SettingsWindow : Window
                 if (r.TryGetProperty("aptCache", out var c)) aptCache = c.GetBoolean();
                 if (r.TryGetProperty("restic", out var rs)) restic = rs.GetBoolean();
                 if (r.TryGetProperty("updateUrl", out var uu)) updateUrl = uu.GetString() ?? "";
+                if (r.TryGetProperty("crashUrl", out var cu)) crashUrl = cu.GetString() ?? "";
             }
         }
         catch { }
@@ -47,6 +49,7 @@ public partial class SettingsWindow : Window
         CacheChk.IsChecked = aptCache;
         ResticChk.IsChecked = restic;
         UpdateUrlBox.Text = updateUrl;
+        CrashUrlBox.Text = crashUrl;
     }
 
     private void RefreshCacheText()
@@ -101,6 +104,7 @@ public partial class SettingsWindow : Window
         root["aptCache"] = CacheChk.IsChecked == true;
         root["restic"] = ResticChk.IsChecked == true;
         root["updateUrl"] = UpdateUrlBox.Text.Trim();
+        root["crashUrl"] = CrashUrlBox.Text.Trim();
         var json = root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
 
         try

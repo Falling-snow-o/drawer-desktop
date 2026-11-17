@@ -103,3 +103,13 @@
 - 代价：多一个 PowerShell 进程，约 +110 MB 内存（实测两个共约 224 MB）
 
 实测：`[daemon] 已就绪（快/慢双进程）`，`info#1 88ms`，界面冒烟 26/26。
+
+## L3 交付能力（2026-11-17 补充）
+
+| 能力 | 状态 | 说明 |
+|---|---|---|
+| 代码签名 | ✅ 流程可用 | `打包.ps1 -Sign -CertThumbprint`；自签名验证通过，公开分发需受信任证书 |
+| 自动更新 | ✅ 本地端到端 | 清单 → 下载 → sha256 → 安装器 `--quiet --restart` → 重启；`file://` 与 HTTP 同一代码路径 |
+| 回滚 | ✅ | 覆盖前备份到 `Drawer.backup`，`--rollback` 覆盖还原并重启 |
+| 崩溃报告 | ✅ 本地 + 可选上报 | `~/.boxrun/crashes/`；设置 `crashUrl` 后 POST 文本；诊断包包含 crashes |
+| 远程 CI | ⚠️ 需远端仓库 | workflow 已就绪（Windows runner：语法+编译+打包），本机可跑 `test/ci.ps1` |
