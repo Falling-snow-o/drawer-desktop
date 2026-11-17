@@ -280,6 +280,8 @@ public partial class MainWindow
 
     private async void TagBtn_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy) { ShowError("有操作在执行，等它结束再试"); return; }
+
         var b = SelectedBox;
         if (b == null) { Log("[标签] 没有选中的抽屉"); return; }
         var dlg = DialogShell.Prompt("标签", "给「" + b + "」设置分组标签（留空清除）：", BoxMeta.TagOf(b));
@@ -305,6 +307,8 @@ public partial class MainWindow
 
     private void CollabMenu_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy) { ShowError("有操作在执行，等它结束再试"); return; }
+
         var b = SelectedBox;
         if (b == null) { ShowError("先选一个抽屉"); return; }
         new CollabWindow(b, args => CaptureAsync(args)) { Owner = this }.ShowDialog();
@@ -312,6 +316,8 @@ public partial class MainWindow
 
     private async void DiagMenu_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy) { ShowError("有操作在执行，等它结束再试"); return; }
+
         try
         {
             var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
@@ -413,6 +419,8 @@ public partial class MainWindow
 
     private void WallBtn_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy) { ShowError("有操作在执行，等它结束再试"); return; }
+
         new StatusWallWindow(
             () => CaptureAsync("api", "list"),
             n => CaptureAsync("info", n, "-fast"),
@@ -430,6 +438,8 @@ public partial class MainWindow
 
     private async void PortBtn_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy) { ShowError("有操作在执行，等它结束再试"); return; }
+
         var b = SelectedBox;
         if (b == null) return;
         var win = new PortsWindow(b, () => CaptureAsync("ports", b)) { Owner = this };
@@ -521,12 +531,14 @@ public partial class MainWindow
 
         // 2) 120ms 防抖，连点只发一次 info
         _selDebounce?.Stop();
-        _selDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
-        _selDebounce.Tick += async (_, _) =>
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
+        timer.Tick += async (_, _) =>
         {
-            _selDebounce.Stop();
+            timer.Stop();
+            if (!ReferenceEquals(_selDebounce, timer)) return;   // 已被更新的选择取代
             await RefreshAsync();
         };
-        _selDebounce.Start();
+        _selDebounce = timer;
+        timer.Start();
     }
 }

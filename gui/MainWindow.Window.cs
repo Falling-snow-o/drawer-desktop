@@ -88,7 +88,7 @@ public partial class MainWindow
 
     private void OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
-        try { _client?.Dispose(); } catch { }
+        // 隐藏到托盘时不能释放引擎客户端，否则再打开会重建 daemon
         if (!_reallyExit)
         {
             e.Cancel = true;
@@ -101,6 +101,8 @@ public partial class MainWindow
         StopClipboardSync();
 
         if (_busy) { e.Cancel = true; MessageBox.Show(this, "还有操作在执行，等它结束再关。", "Drawer Desktop"); return; }
+
+        try { _client?.Dispose(); } catch { }
 
         var b = SelectedBox;
         bool running = _hasInfo && _info.TryGetProperty("running", out var r) && r.ValueKind == JsonValueKind.True;

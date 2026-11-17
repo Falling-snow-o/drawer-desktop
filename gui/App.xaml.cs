@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -12,6 +12,8 @@ public partial class App : System.Windows.Application
     private Mutex _mutex;
     private EventWaitHandle _activate;
     private const string ActivateName = @"Local\drawer-activate";
+    private const string QuitName = @"Local\drawer-quit";
+    private EventWaitHandle _quit;
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr FindWindow(string cls, string title);
@@ -30,6 +32,15 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // 安装器/脚本用它请求优雅退出（不弹托盘、不杀进程）
+        var argv = Environment.GetCommandLineArgs();
+        if (Array.Exists(argv, a => string.Equals(a, "--quit", StringComparison.OrdinalIgnoreCase)))
+        {
+            try { using var q = EventWaitHandle.OpenExisting(QuitName); q.Set(); } catch { }
+            Shutdown();
+            return;
+        }
+
         bool created;
         _mutex = new Mutex(true, @"Local\drawer-gui", out created);
         if (!created)
@@ -60,6 +71,16 @@ public partial class App : System.Windows.Application
             }
         });
 
+        _quit = new EventWaitHandle(false, EventResetMode.AutoReset, QuitName);
+        Task.Run(() =>
+        {
+            while (true)
+            {
+                _quit.WaitOne();
+                try { Dispatcher.BeginInvoke(new Action(() => (MainWindow as MainWindow)?.RequestQuit())); } catch { }
+            }
+        });
+
         var args = Environment.GetCommandLineArgs();
         bool tray = Array.Exists(args, a => string.Equals(a, "--tray", StringComparison.OrdinalIgnoreCase));
 
@@ -82,6 +103,7 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         try { _mutex?.ReleaseMutex(); } catch { }
+        try { _quit?.Dispose(); } catch { }
         base.OnExit(e);
     }
 

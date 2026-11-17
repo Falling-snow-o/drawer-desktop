@@ -79,6 +79,8 @@ public partial class MainWindow : Window
             if (_busy) return;
             if (!IsVisible) return;                       // 托盘隐藏时完全不刷
             if (WindowState == WindowState.Minimized) return;
+            // 模态对话框开着时不要在背后刷状态，避免和窗口里的引擎调用抢 WSL
+            if (Application.Current.Windows.OfType<Window>().Any(w => w != this && w.IsVisible && w.Owner == this)) return;
             await RefreshAsync();
         };
         Activated += async (_, _) => { if (!_busy) await RefreshAsync(); };

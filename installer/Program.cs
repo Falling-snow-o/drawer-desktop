@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -52,6 +52,7 @@ internal static class Program
         catch (Exception ex)
         {
             Log("FAIL " + ex);
+            Environment.ExitCode = 1;
             if (!quiet)
                 MessageBox.Show("安装失败：\n\n" + ex.Message, "Drawer Desktop", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -61,6 +62,9 @@ internal static class Program
     {
         if (!force && !HasDotNet8(quiet)) return;
         if (!quiet) CheckWsl();
+
+        // 覆盖安装前必须先停掉运行中的管理器，否则 exe 被占用
+        if (!EnsureStopped(dir, quiet)) { Environment.ExitCode = 1; return; }
 
         var asm = Assembly.GetExecutingAssembly();
         var names = asm.GetManifestResourceNames();
@@ -142,6 +146,58 @@ internal static class Program
         return false;
     }
 
+    private static bool EnsureStopped(string dir, bool quiet)
+    {
+        // 1) 有操作在执行时不要杀进程（会打断构建/快照）
+        try
+        {
+            var marker = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".boxrun", "state", "busy.json");
+            if (File.Exists(marker))
+            {
+                var age = DateTime.Now - File.GetLastWriteTime(marker);
+                int pid = 0;
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(marker));
+                    if (doc.RootElement.TryGetProperty("pid", out var pe)) pid = pe.GetInt32();
+                }
+                catch { }
+
+                bool alive = false;
+                try { alive = pid > 0 && !Process.GetProcessById(pid).HasExited; } catch { }
+                if (alive && age < TimeSpan.FromMinutes(30))
+                {
+                    var msg = "Drawer 正在执行操作（pid " + pid + "），安装已中止。等它结束再试。";
+                    if (quiet) Log(msg); else MessageBox.Show(msg, "Drawer Desktop");
+                    return false;
+                }
+            }
+        }
+        catch { }
+
+        var exe = Path.Combine(dir, "Drawer.exe");
+        foreach (var p in Process.GetProcessesByName("Drawer"))
+        {
+            try
+            {
+                var path = p.MainModule?.FileName;
+                if (path == null || !path.StartsWith(dir, StringComparison.OrdinalIgnoreCase)) continue;
+                Log("stopping running Drawer pid=" + p.Id);
+
+                try { if (File.Exists(exe)) Process.Start(new ProcessStartInfo(exe, "--quit") { UseShellExecute = true }); } catch { }
+                if (!p.WaitForExit(10000))
+                {
+                    p.CloseMainWindow();
+                    if (!p.WaitForExit(3000)) p.Kill(true);
+                }
+                p.WaitForExit(3000);
+            }
+            catch { }
+        }
+        return true;
+    }
+
     private static void CheckWsl()
     {
         try
@@ -209,21 +265,8 @@ internal static class Program
 
         try { Directory.SetCurrentDirectory(Path.GetTempPath()); } catch { }
 
-        // 关掉正在运行的管理器，否则 exe 被占用
-        foreach (var p in Process.GetProcessesByName("Drawer"))
-        {
-            try
-            {
-                var path = p.MainModule?.FileName;
-                if (path != null && path.StartsWith(dir, StringComparison.OrdinalIgnoreCase))
-                {
-                    Log("stopping running BoxRun pid=" + p.Id);
-                    p.CloseMainWindow();
-                    if (!p.WaitForExit(3000)) p.Kill(true);
-                }
-            }
-            catch { }
-        }
+        // 关掉正在运行的管理器；有操作在执行则中止安装
+        if (!EnsureStopped(dir, quiet)) { Environment.ExitCode = 1; return; }
         try { Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false); } catch { }
         RemoveAutostart();
         if (shortcuts) RemoveShortcuts();

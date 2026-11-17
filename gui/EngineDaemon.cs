@@ -21,6 +21,8 @@ public sealed class EngineDaemon : IDisposable
     private Process _proc;
     private int _nextId;
     private readonly object _gate = new();
+    private readonly System.Threading.SemaphoreSlim _writeLock = new(1, 1);
+    private volatile bool _disposed;
 
     public EngineDaemon(string enginePath, string root)
     {
@@ -92,6 +94,7 @@ while ($true) {{
 
     public void EnsureStarted()
     {
+        if (_disposed) throw new ObjectDisposedException(nameof(EngineDaemon));
         lock (_gate)
         {
             if (IsAlive) return;
@@ -145,7 +148,6 @@ while ($true) {{
 
     public async Task<string> QueryAsync(string method, params string[] args)
     {
-        EnsureStarted();
         var id = System.Threading.Interlocked.Increment(ref _nextId);
         var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pending[id] = tcs;
@@ -153,8 +155,7 @@ while ($true) {{
         var payload = JsonSerializer.Serialize(new { id, method, args });
         try
         {
-            await _proc.StandardInput.WriteLineAsync(payload);
-            await _proc.StandardInput.FlushAsync();
+            await SendAsync(payload);
             using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(12));
             try { return await tcs.Task.WaitAsync(cts.Token); }
             catch (OperationCanceledException) { throw new TimeoutException("引擎查询超时"); }
@@ -165,6 +166,38 @@ while ($true) {{
         }
     }
 
+    /// <summary>多条查询并发时串行写 stdin；写失败（进程已退）重启一次再试。</summary>
+    private async Task SendAsync(string payload)
+    {
+        Exception last = null;
+        for (int attempt = 0; attempt < 2; attempt++)
+        {
+            EnsureStarted();
+            Process p;
+            lock (_gate) { p = _proc; }
+            if (p == null) { last = new InvalidOperationException("引擎进程未启动"); continue; }
+
+            try
+            {
+                await _writeLock.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await p.StandardInput.WriteLineAsync(payload).ConfigureAwait(false);
+                    await p.StandardInput.FlushAsync().ConfigureAwait(false);
+                }
+                finally { _writeLock.Release(); }
+                return;
+            }
+            catch (Exception ex)
+            {
+                last = ex;
+                try { if (!p.HasExited) p.Kill(true); } catch { }
+                lock (_gate) { if (ReferenceEquals(_proc, p)) _proc = null; }
+            }
+        }
+        throw new IOException("写入引擎失败: " + (last?.Message ?? "未知错误"));
+    }
+
     private void FailAll(string reason)
     {
         foreach (var kv in _pending)
@@ -173,8 +206,10 @@ while ($true) {{
 
     public void Dispose()
     {
+        _disposed = true;
         try
         {
+            try { _writeLock.Wait(2000); } catch { }
             if (_proc != null && !_proc.HasExited)
             {
                 try { _proc.StandardInput.WriteLine(); } catch { }
@@ -184,6 +219,7 @@ while ($true) {{
         }
         catch { }
         _proc = null;
+        try { _writeLock.Release(); } catch { }
         FailAll("引擎进程已关闭");
     }
 }

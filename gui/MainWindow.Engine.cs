@@ -53,6 +53,37 @@ public partial class MainWindow
 
     private static string ExtractJson(string raw) => JsonUtil.Object(raw, "{}");
 
+    private static string BusyMarker => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".boxrun", "state", "busy.json");
+
+    /// <summary>安装器/更新器据此判断“现在不能杀进程”。</summary>
+    private void MarkBusy(string verb)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(BusyMarker)!);
+            File.WriteAllText(BusyMarker, JsonSerializer.Serialize(new
+            {
+                pid = Environment.ProcessId,
+                verb,
+                started = DateTime.Now.ToString("s")
+            }));
+        }
+        catch { }
+    }
+
+    private void ClearBusyMark()
+    {
+        try { File.Delete(BusyMarker); } catch { }
+    }
+
+    public void RequestQuit()
+    {
+        if (_busy) { Log("[退出] 有操作在执行，等结束再退"); return; }
+        _reallyExit = true;
+        Close();
+    }
+
 
     private async Task RunActionAsync(params string[] args)
     {
@@ -60,6 +91,7 @@ public partial class MainWindow
 
         _busy = true;
         _busyStart = DateTime.Now;
+        MarkBusy(args.Length > 0 ? args[0] : "action");
         _lastActive = DateTime.Now;
         ProgressText.Text = "执行中 0s";
         SetButtons();
@@ -111,6 +143,7 @@ public partial class MainWindow
             Log($"[结束] {string.Join(' ', args)} · {(DateTime.Now - _busyStart).TotalSeconds:0.0}s");
             _runProc = null;
             _busy = false;
+            ClearBusyMark();
             Bar.IsIndeterminate = false;
             Bar.Value = 0;
             Bar.Visibility = Visibility.Collapsed;

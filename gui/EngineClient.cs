@@ -10,7 +10,7 @@ public sealed class EngineClient
 {
     private readonly string _ps;
     private readonly string _engine;
-    private readonly EngineDaemon _daemon;
+    private EngineDaemon _daemon;
     private readonly Action<string> _log;
     private readonly System.Collections.Generic.Dictionary<string, int> _calls = new();
     private volatile bool _daemonReady;
@@ -117,7 +117,13 @@ public sealed class EngineClient
                     _log?.Invoke($"[daemon] {mapped.Value.Method}#{n} {ms}ms");
                 return r;
             }
-            catch { _daemon.Dispose(); }
+            catch
+            {
+                try { _daemon.Dispose(); } catch { }
+                _daemon = new EngineDaemon(_engine, WorkingRoot);
+                _daemonReady = false;
+                _ = PrewarmAsync();   // 后台重建，失败就继续走直连
+            }
         }
 
         using var p = new Process { StartInfo = CreateStartInfo(args) };
