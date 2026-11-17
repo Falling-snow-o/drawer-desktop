@@ -1,5 +1,14 @@
 ﻿# engine/snapshots.ps1 — 由 box.ps1 dot-source 加载
 
+function Assert-SnapTag([string] $Tag) {
+    if (-not $Tag) { throw '快照名不能为空' }
+    if ($Tag.Length -gt 64) { throw '快照名太长（最多 64 字符）' }
+    if ($Tag -match '[\\/:*?"<>|]' -or $Tag -match '\.\.' -or $Tag -match '^[.\s]+$') {
+        throw ('非法的快照名: ' + $Tag + '（不能包含路径分隔符、.. 或特殊字符）')
+    }
+    return $Tag
+}
+
 function Get-Restic {
     $local = Join-Path $env:USERPROFILE '.boxrun\tools\restic.exe'
     if (Test-Path -LiteralPath $local) { return [pscustomobject]@{ Source = $local } }
@@ -25,10 +34,12 @@ function Invoke-Snap {
 
     $cfg = Get-BoxConfig -Dir (Get-BoxDir $Box)
     if (-not $Tag) { throw "用法: box.ps1 snap <name> <tag>" }
+    $Tag = Assert-SnapTag $Tag
 
     $snapDir = Join-Path $cfg.State 'snapshots'
     if (-not (Test-Path -LiteralPath $snapDir)) { New-Item -ItemType Directory -Force -Path $snapDir | Out-Null }
     $plain = Join-Path $snapDir ("{0}.tar" -f $Tag)
+    if (Test-Path -LiteralPath $plain) { throw ("快照已存在: " + $Tag + "（换个名字或先 snap-delete）") }
     $out = $plain
 
     Write-Step ("快照 {0} → {1}" -f $cfg.Name, $Tag)
@@ -124,6 +135,7 @@ function Invoke-SnapList {
 function Invoke-SnapDelete {
     param([string] $Tag)
     if (-not $Tag) { throw "用法: box.ps1 snap-delete <name> <tag>" }
+    $Tag = Assert-SnapTag $Tag
 
     $cfg = Get-BoxConfig -Dir (Get-BoxDir $Box)
     $restic = Get-Restic
@@ -154,6 +166,7 @@ function Invoke-SnapRestore {
 
     $cfg = Get-BoxConfig -Dir (Get-BoxDir $Box)
     if (-not $Tag) { throw "用法: box.ps1 snap-restore <name> <tag>" }
+    $Tag = Assert-SnapTag $Tag
 
     $snapDir = Join-Path $cfg.State 'snapshots'
     $restic = Get-Restic
