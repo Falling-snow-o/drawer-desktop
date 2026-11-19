@@ -237,6 +237,18 @@ switch ($v) {
             'list'    { ConvertTo-Json -Compress -Depth 5 -InputObject ([pscustomobject]@{ boxes = @(Get-BoxList) }) }
             'info'    { (Get-BoxInfo -Dir (Get-BoxDir $arg)) | ConvertTo-Json -Compress -Depth 5 }
             'catalog' { ConvertTo-Json -Compress -Depth 6 -InputObject (Get-Catalog) }
+            'gui-active' {
+                $cfg2 = Get-BoxConfig -Dir (Get-BoxDir $arg)
+                $active = $false
+                if (Test-Distro $cfg2.Name) {
+                    $r = Invoke-Wsl -WslArgs @(
+                        '-d', $cfg2.Name, '-u', 'root', '--', 'bash', '-c',
+                        'if pgrep -x Xephyr >/dev/null 2>&1 || pgrep -x xfwm4 >/dev/null 2>&1 || pgrep -x pcmanfm >/dev/null 2>&1 || pgrep -x Thunar >/dev/null 2>&1; then echo yes; else echo no; fi'
+                    ) -Quiet
+                    $active = (($r.Out -join '') -match 'yes')
+                }
+                ConvertTo-Json -Compress -InputObject ([pscustomobject]@{ active = $active })
+            }
             default   { Write-Bad '用法: box.ps1 api list | api info <box> | api catalog' }
         }
         break

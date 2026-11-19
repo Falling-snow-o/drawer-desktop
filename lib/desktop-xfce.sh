@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 # 在 WSLg 的 :0 上开一个嵌套 X 服务器，整个桌面画进一个窗口
 # 显示号按抽屉名算，避免多个抽屉共用 :1 互相冲突（抽象 socket 是共享的）
 unset WAYLAND_DISPLAY
@@ -39,6 +39,15 @@ sleep 2
 export DISPLAY="$XNUM"
 setsid xfwm4 --compositor=off >/tmp/boxrun-xfwm4.log 2>&1 < /dev/null &
 sleep 2
+
+# 关掉屏保和 DPMS：否则桌面闲置一段时间会黑屏
+# Xephyr 刚起来时 X socket 可能还没就绪，重试到成功为止
+for i in 1 2 3 4 5 6 7 8 9 10; do
+    xset s off >/dev/null 2>&1 && break
+    sleep 1
+done
+xset -dpms >/dev/null 2>&1 || true
+xset s noblank >/dev/null 2>&1 || true
 
 # 设置守护和面板先起，配置好主题/壁纸后再起桌面图标
 setsid dbus-run-session -- bash -c "unset WAYLAND_DISPLAY; export DISPLAY=$XNUM GDK_BACKEND=x11; xfsettingsd & xfce4-panel & sleep 40" >/tmp/boxrun-xfce.log 2>&1 < /dev/null &

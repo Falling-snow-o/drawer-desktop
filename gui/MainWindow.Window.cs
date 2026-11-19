@@ -78,6 +78,20 @@ public partial class MainWindow
         if (!running) return;
         if ((DateTime.Now - _lastActive).TotalMinutes < 5) return;
 
+        // 桌面 / 图形窗口开着时不要自动停，否则会变成灰黑屏
+        try
+        {
+            var box = SelectedBox;
+            var raw = await CaptureAsync("api", "gui-active", box);
+            using var doc = JsonDocument.Parse(ExtractJson(raw));
+            if (doc.RootElement.TryGetProperty("active", out var a) && a.ValueKind == JsonValueKind.True)
+            {
+                _lastActive = DateTime.Now;   // 重新计时，5 分钟后再看
+                return;
+            }
+        }
+        catch { }
+
         Log("空闲 5 分钟，自动停止");
         await RunActionAsync("down", SelectedBox);
     }
