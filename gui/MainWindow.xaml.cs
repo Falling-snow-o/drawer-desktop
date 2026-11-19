@@ -67,7 +67,7 @@ public partial class MainWindow : Window
 
         (_engine, _root) = FindEngine();
         _client = new EngineClient(_engine, _root, LogTrace);
-        VerText.Text = "v1.0";
+        VerText.Text = "v" + (typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "1.0");
         StatusLine.Text = $"引擎: {_engine}";
 
         Loaded += OnLoaded;
