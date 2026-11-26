@@ -19,7 +19,7 @@ function Invoke-Desktop {
     if ($probeMode) {
         $chk = Invoke-Wsl -WslArgs @(
             '-d', $cfg.Name, '-u', 'root', '--', 'bash', '-c',
-            'command -v Xephyr >/dev/null 2>&1 && command -v xfwm4 >/dev/null 2>&1 && command -v picom >/dev/null 2>&1 && echo yes || echo no'
+            'command -v Xephyr >/dev/null 2>&1 && command -v xfwm4 >/dev/null 2>&1 && echo yes || echo no'
         ) -Quiet
         $needInstall = (($chk.Out -join '') -notmatch 'yes')
         $json = if ($needInstall) { '{"needInstall":true}' } else { '{"needInstall":false}' }
@@ -42,11 +42,11 @@ function Invoke-Desktop {
 
 
     $autoYes = (($Rest -join ' ') -match '\-y')
-    $need = 'xfce4 xserver-xephyr x11-utils xdotool arc-theme papirus-icon-theme picom xclip pulseaudio-utils xfce4-pulseaudio-plugin'
+    $need = 'xfce4 xserver-xephyr x11-utils xdotool arc-theme papirus-icon-theme xclip pulseaudio-utils xfce4-pulseaudio-plugin'
 
     $probe = Invoke-Wsl -WslArgs @(
         '-d', $cfg.Name, '-u', 'root', '--', 'bash', '-c',
-        'command -v Xephyr >/dev/null 2>&1 && command -v xfwm4 >/dev/null 2>&1 && command -v picom >/dev/null 2>&1 && echo yes || echo no'
+        'command -v Xephyr >/dev/null 2>&1 && command -v xfwm4 >/dev/null 2>&1 && echo yes || echo no'
     ) -Quiet
 
     if (($probe.Out -join '') -notmatch 'yes') {
@@ -90,8 +90,37 @@ timeout 1800 apt-get install -y -qq --no-install-recommends -o Dpkg::Lock::Timeo
     Set-GuestFile -Distro $cfg.Name -Path '/etc/boxrun/boxname' -Content $cfg.Name
     $rres = if ($env:BOXRUN_DESKTOP_RES) { $env:BOXRUN_DESKTOP_RES } else { '1600x1000' }
     Set-GuestFile -Distro $cfg.Name -Path '/etc/boxrun/desktop.res' -Content $rres
-    Set-GuestFile -Distro $cfg.Name -Path '/tmp/boxrun-desktop.sh' -Content (Get-Content -LiteralPath $runFile -Raw -Encoding UTF8)
-    $r2 = Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '/tmp/boxrun-desktop.sh') -Quiet
+    $desktopBody = Get-Content -LiteralPath $runFile -Raw -Encoding UTF8
+    Set-GuestFile -Distro $cfg.Name -Path '/usr/local/bin/boxrun-desktop.sh' -Content $desktopBody
+
+    # 守护脚本：Xephyr/xfwm4 意外退出时自动重启桌面
+    $watchBody = @'
+#!/bin/bash
+miss=0
+while true; do
+    sleep 10
+    if pgrep -x Xephyr >/dev/null 2>&1 && pgrep -x xfwm4 >/dev/null 2>&1; then
+        miss=0
+    else
+        miss=$((miss+1))
+    fi
+    if [ "$miss" -ge 3 ]; then
+        /usr/local/bin/boxrun-desktop.sh >>/tmp/boxrun-watch.log 2>&1
+        miss=0
+    fi
+done
+'@
+    Set-GuestFile -Distro $cfg.Name -Path '/usr/local/bin/boxrun-desktop-watch.sh' -Content $watchBody
+    Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '-c',
+        'chmod +x /usr/local/bin/boxrun-desktop.sh /usr/local/bin/boxrun-desktop-watch.sh; systemctl stop boxrun-desktop-watch 2>/dev/null || true') -Quiet | Out-Null
+
+    $r2 = Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '/usr/local/bin/boxrun-desktop.sh') -Quiet
+    $watchStart = Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '-c',
+        'systemd-run --unit=boxrun-desktop-watch --collect /usr/local/bin/boxrun-desktop-watch.sh') -Quiet
+    if ($watchStart.Code -ne 0) {
+        Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '-c',
+            'setsid /usr/local/bin/boxrun-desktop-watch.sh >/dev/null 2>&1 < /dev/null &') -Quiet | Out-Null
+    }
     foreach ($l in $r2.Out) { if ($l.Trim()) { Write-Host ("    " + $l) } }
 
     if (($r2.Out -join ' ') -match 'window=1') {

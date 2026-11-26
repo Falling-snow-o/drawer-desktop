@@ -25,13 +25,13 @@ done
 sleep 1
 rm -f "/tmp/.X${NUM}-lock" "/tmp/.X11-unix/X${NUM}" 2>/dev/null
 
-setsid Xephyr "$XNUM" -screen "${BOXRUN_DESKTOP_RES:-1600x1000}" -resizeable -ac -nolisten tcp -title "boxrun desktop" >/tmp/boxrun-xephyr.log 2>&1 < /dev/null &
+setsid Xephyr "$XNUM" -screen "${BOXRUN_DESKTOP_RES:-1600x1000}" -resizeable -ac -noreset -nolisten tcp -title "boxrun desktop" >/tmp/boxrun-xephyr.log 2>&1 < /dev/null &
 sleep 2
 # Xephyr 有时会被上一轮残留的抽象 socket 挡住，重试一次
 if ! pgrep -x Xephyr >/dev/null 2>&1; then
     sleep 2
     rm -f "/tmp/.X${NUM}-lock" "/tmp/.X11-unix/X${NUM}" 2>/dev/null
-setsid Xephyr "$XNUM" -screen "${BOXRUN_DESKTOP_RES:-1600x1000}" -resizeable -ac -nolisten tcp -title "boxrun desktop" >/tmp/boxrun-xephyr.log 2>&1 < /dev/null &
+setsid Xephyr "$XNUM" -screen "${BOXRUN_DESKTOP_RES:-1600x1000}" -resizeable -ac -noreset -nolisten tcp -title "boxrun desktop" >/tmp/boxrun-xephyr.log 2>&1 < /dev/null &
     sleep 2
 fi
 sleep 2
@@ -47,7 +47,7 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
 done
 
 export DISPLAY="$XNUM"
-setsid xfwm4 --compositor=off >/tmp/boxrun-xfwm4.log 2>&1 < /dev/null &
+setsid dbus-run-session -- xfwm4 --compositor=off >/tmp/boxrun-xfwm4.log 2>&1 < /dev/null &
 sleep 2
 
 # 关掉屏保和 DPMS：否则桌面闲置一段时间会黑屏
@@ -60,7 +60,7 @@ xset -dpms >/dev/null 2>&1 || true
 xset s noblank >/dev/null 2>&1 || true
 
 # 设置守护和面板先起，配置好主题/壁纸后再起桌面图标
-setsid dbus-run-session -- bash -c "unset WAYLAND_DISPLAY; export DISPLAY=$XNUM GDK_BACKEND=x11; xfsettingsd & xfce4-panel & sleep 40" >/tmp/boxrun-xfce.log 2>&1 < /dev/null &
+setsid dbus-run-session -- bash -c "unset WAYLAND_DISPLAY; export DISPLAY=$XNUM GDK_BACKEND=x11; xfsettingsd & xfce4-panel & sleep infinity" >/tmp/boxrun-xfce.log 2>&1 < /dev/null &
 sleep 2
 
 xfconf-query -c xsettings -p /Net/ThemeName -s Arc-Dark >/dev/null 2>&1 || true
@@ -78,11 +78,8 @@ for p in $(xfconf-query -c xfce4-panel -l 2>/dev/null | grep background-alpha); 
     xfconf-query -c xfce4-panel -p "$p" -s 80 >/dev/null 2>&1 || true
 done
 
-setsid dbus-run-session -- bash -c "unset WAYLAND_DISPLAY; export DISPLAY=$XNUM GDK_BACKEND=x11; xfdesktop & sleep 40" >/tmp/boxrun-xfdesk.log 2>&1 < /dev/null &
+setsid dbus-run-session -- bash -c "unset WAYLAND_DISPLAY; export DISPLAY=$XNUM GDK_BACKEND=x11; xfdesktop & sleep infinity" >/tmp/boxrun-xfdesk.log 2>&1 < /dev/null &
 sleep 1
-if command -v picom >/dev/null 2>&1; then
-    setsid picom --backend xrender >/tmp/boxrun-picom.log 2>&1 < /dev/null &
-fi
 sleep 2
 
 
