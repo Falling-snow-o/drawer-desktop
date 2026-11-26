@@ -13,7 +13,7 @@ name: lab
 # 下载失败时可以手动下好放到 blobs/<image>。
 distro:
   image: ubuntu-base-24.04.3-base-amd64.tar.gz
-  url: https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.3-base-amd64.tar.gz
+  url: https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.3-base-amd64.tar.gz
   packages: pcmanfm gcc libc6-dev
 
 # ------------------------------------------------------------ 资源天花板

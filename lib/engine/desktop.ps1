@@ -44,6 +44,14 @@ function Invoke-Desktop {
     $autoYes = (($Rest -join ' ') -match '\-y')
     $need = 'xfce4 xserver-xephyr x11-utils xdotool arc-theme papirus-icon-theme xclip pulseaudio-utils xfce4-pulseaudio-plugin'
 
+    # apt 共享缓存 + 国内镜像（首次下载，后续抽屉复用）
+    $cacheWin = Join-Path $env:USERPROFILE '.boxrun\apt-cache'
+    $aptPre = @"
+mkdir -p /var/cache/apt/archives
+mountpoint -q /var/cache/apt/archives || mount -t drvfs '$cacheWin' /var/cache/apt/archives -o metadata,uid=0,gid=0,umask=022 2>/dev/null || true
+sed -i -E 's#https?://(archive|security)\.ubuntu\.com/ubuntu#https://mirrors.tuna.tsinghua.edu.cn/ubuntu#g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+"@
+
     $probe = Invoke-Wsl -WslArgs @(
         '-d', $cfg.Name, '-u', 'root', '--', 'bash', '-c',
         'command -v Xephyr >/dev/null 2>&1 && command -v xfwm4 >/dev/null 2>&1 && echo yes || echo no'
@@ -68,7 +76,7 @@ chmod +x /usr/sbin/policy-rc.d
 timeout 180 apt-get update -qq >/tmp/boxrun-desktop.log 2>&1 || true
 timeout 1800 apt-get install -y -qq --no-install-recommends -o Dpkg::Lock::Timeout=60 -o Acquire::http::Timeout=30 $need >>/tmp/boxrun-desktop.log 2>&1
 "@
-        Set-GuestFile -Distro $cfg.Name -Path '/tmp/boxrun-desktop-install.sh' -Content $inst
+        Set-GuestFile -Distro $cfg.Name -Path '/tmp/boxrun-desktop-install.sh' -Content ($aptPre + $inst)
         $r = Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '/tmp/boxrun-desktop-install.sh') -Quiet
         if ($r.Code -ne 0) { Write-Bad "安装失败（箱内 /tmp/boxrun-desktop.log）"; return }
         Write-Ok "桌面组件已装好"
@@ -102,7 +110,7 @@ timeout 600 apt-get install -y -qq --no-install-recommends locales language-pack
 locale-gen zh_CN.UTF-8 >>/tmp/boxrun-locale.log 2>&1 || true
 update-locale LANG=zh_CN.UTF-8 LANGUAGE=zh_CN:zh >>/tmp/boxrun-locale.log 2>&1 || true
 '@
-        Set-GuestFile -Distro $cfg.Name -Path '/tmp/boxrun-locale.sh' -Content $locScript
+        Set-GuestFile -Distro $cfg.Name -Path '/tmp/boxrun-locale.sh' -Content ($aptPre + $locScript)
         Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '/tmp/boxrun-locale.sh') -Quiet | Out-Null
         Write-Ok "中文语言包已安装"
     }
@@ -117,7 +125,7 @@ sed -i 's|^path-exclude=/usr/share/locale.*|# &|' /etc/dpkg/dpkg.cfg.d/excludes 
 export DEBIAN_FRONTEND=noninteractive
 timeout 600 apt-get install --reinstall -y -qq xfce4-panel xfce4-settings xfce4-session xfce4-terminal thunar thunar-data xfwm4 libgtk-3-0 >/tmp/boxrun-i18n.log 2>&1
 '@
-        Set-GuestFile -Distro $cfg.Name -Path '/tmp/boxrun-i18n.sh' -Content $i18n
+        Set-GuestFile -Distro $cfg.Name -Path '/tmp/boxrun-i18n.sh' -Content ($aptPre + $i18n)
         Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '/tmp/boxrun-i18n.sh') -Quiet | Out-Null
     }
 

@@ -68,7 +68,7 @@ function Get-BoxConfig {
     $name = if ($y['name']) { [string]$y['name'] } else { Split-Path $Dir -Leaf }
     $img  = if ($d['image']) { [string]$d['image'] } else { 'ubuntu-base-24.04.3-base-amd64.tar.gz' }
     $url  = if ($d['url'])   { [string]$d['url'] }
-            else { 'https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.3-base-amd64.tar.gz' }
+            else { 'https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.3-base-amd64.tar.gz' }
 
     $obj = [pscustomobject]@{
         Name      = $name

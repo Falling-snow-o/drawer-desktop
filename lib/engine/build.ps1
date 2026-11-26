@@ -29,13 +29,21 @@ function Invoke-Build {
     if (-not (Test-Path -LiteralPath $img)) {
         Write-Step "下载 rootfs"
         Write-Dim $cfg.Url
-        try {
-            Invoke-WebRequest -Uri $cfg.Url -OutFile $img -UseBasicParsing
-            $mb = [math]::Round((Get-Item -LiteralPath $img).Length / 1MB, 1)
-            Write-Ok ("下载完成 ({0} MB)" -f $mb)
-        } catch {
-            throw ("下载失败: {0}`n请手动下载后放到: {1}" -f $_.Exception.Message, $img)
+        $urls = @($cfg.Url)
+        if ($cfg.Url -match 'tuna') { $urls += 'https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.3-base-amd64.tar.gz' }
+        $ok = $false
+        $lastErr = ''
+        foreach ($u in $urls) {
+            try {
+                if (Test-Path -LiteralPath $img) { Remove-Item -LiteralPath $img -Force -EA SilentlyContinue }
+                Invoke-WebRequest -Uri $u -OutFile $img -UseBasicParsing
+                $ok = $true
+                break
+            } catch { $lastErr = $_.Exception.Message }
         }
+        if (-not $ok) { throw ("下载失败: {0}`n请手动下载后放到: {1}" -f $lastErr, $img) }
+        $mb = [math]::Round((Get-Item -LiteralPath $img).Length / 1MB, 1)
+        Write-Ok ("下载完成 ({0} MB)" -f $mb)
     } else {
         $mb = [math]::Round((Get-Item -LiteralPath $img).Length / 1MB, 0)
         Write-Dim ("rootfs 已存在 ({0} MB)" -f $mb)
@@ -103,6 +111,7 @@ function Invoke-Build {
     Write-Step ("构建期预装: {0}" -f $pkgs)
 
         # 脚本写文件再执行：wsl.exe 会吃掉命令行里的引号和反斜杠，长脚本走 base64 更稳
+        $cacheWin = Join-Path $env:USERPROFILE '.boxrun\apt-cache'
         $pre = @'
 #!/bin/bash
 need=""
@@ -115,6 +124,9 @@ for p in wslu zstd; do
     dpkg -s "$p" >/dev/null 2>&1 || need="$need $p"
 done
 if [ -z "$need" ]; then echo "all-installed"; exit 0; fi
+# 共享 apt 缓存（drvfs，automount 关闭也能挂）
+mkdir -p /var/cache/apt/archives
+mountpoint -q /var/cache/apt/archives || mount -t drvfs '__CACHE__' /var/cache/apt/archives -o metadata,uid=0,gid=0,umask=022 2>/dev/null || true
 mkdir -p /usr/sbin
 printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d
 chmod +x /usr/sbin/policy-rc.d
@@ -139,7 +151,10 @@ set_mirror() {
     fi
   done
 }
-[ -n "$HOST" ] && { set_mirror "$HOST"; echo "MIRROR=$HOST"; }
+# 构建统一走清华源（国内快很多），失败再回退官方
+HOST="mirrors.tuna.tsinghua.edu.cn"
+set_mirror "$HOST"
+echo "MIRROR=$HOST"
 try_install() {
   timeout 180 apt-get update -qq >/tmp/boxrun-build.log 2>&1 || true
   timeout 1800 apt-get install -y -qq --no-install-recommends \
@@ -156,6 +171,7 @@ else
 fi
 '@
         $pre = $pre.Replace('__PKGS__', $pkgs)
+        $pre = $pre.Replace('__CACHE__', $cacheWin)
         Set-GuestFile -Distro $cfg.Name -Path '/tmp/boxrun-preinstall.sh' -Content $pre
         $mtx = New-Object System.Threading.Mutex($false, 'Local\drawer-apt-cache')
         [void]$mtx.WaitOne(1800000)
