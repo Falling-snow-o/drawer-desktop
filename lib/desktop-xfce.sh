@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # 在 WSLg 的 :0 上开一个嵌套 X 服务器，整个桌面画进一个窗口
 # 显示号按抽屉名算，避免多个抽屉共用 :1 互相冲突（抽象 socket 是共享的）
 unset WAYLAND_DISPLAY
@@ -35,6 +35,16 @@ setsid Xephyr "$XNUM" -screen "${BOXRUN_DESKTOP_RES:-1600x1000}" -resizeable -ac
     sleep 2
 fi
 sleep 2
+
+# 等 X server 真正可用再起窗口管理器（冷启动时 2 秒不够）
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    [ -S "/tmp/.X11-unix/X${NUM}" ] && break
+    sleep 0.5
+done
+for i in 1 2 3 4 5 6 7 8 9 10; do
+    DISPLAY="$XNUM" xdpyinfo >/dev/null 2>&1 && break
+    sleep 0.5
+done
 
 export DISPLAY="$XNUM"
 setsid xfwm4 --compositor=off >/tmp/boxrun-xfwm4.log 2>&1 < /dev/null &

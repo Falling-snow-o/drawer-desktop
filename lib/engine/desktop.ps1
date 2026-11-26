@@ -42,7 +42,7 @@ function Invoke-Desktop {
 
 
     $autoYes = (($Rest -join ' ') -match '\-y')
-    $need = 'xfce4 xserver-xephyr x11-utils arc-theme papirus-icon-theme picom xclip pulseaudio-utils xfce4-pulseaudio-plugin'
+    $need = 'xfce4 xserver-xephyr x11-utils xdotool arc-theme papirus-icon-theme picom xclip pulseaudio-utils xfce4-pulseaudio-plugin'
 
     $probe = Invoke-Wsl -WslArgs @(
         '-d', $cfg.Name, '-u', 'root', '--', 'bash', '-c',

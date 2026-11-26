@@ -6,6 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 
 namespace DrawerMcp;
 
@@ -92,6 +95,14 @@ internal static class Program
             "List recorded agent tasks (newest first).",
             new { },
             Array.Empty<string>()),
+        Tool("drawer_input",
+            "Send mouse or keyboard input to the drawer desktop via xdotool, e.g. args \"mousemove 100 200\" or \"key ctrl+s\".",
+            new { task_id = Str("task id"), args = Str("xdotool arguments") },
+            new[] { "task_id", "args" }),
+        Tool("drawer_screenshot",
+            "Capture the desktop window (or a window whose title contains the given text) and return it as a PNG image.",
+            new { title = Str("optional window title substring, default: boxrun desktop") },
+            Array.Empty<string>()),
     };
 
     private static object Tool(string name, string description, object properties, string[] required) => new
@@ -119,8 +130,15 @@ internal static class Program
             switch (name)
             {
                 case "drawer_begin_task":
-                    output = RunEngine("agent", Get(args, "box", true), "begin",
-                        Get(args, "host_dir", true), Get(args, "name", false));
+                    var beginArgs = new List<string>
+                    {
+                        "agent", Get(args, "box", true), "begin", Get(args, "host_dir", true)
+                    };
+                    var nm = Get(args, "name", false);
+                    if (nm != null) beginArgs.Add(nm);
+                    if (args.TryGetPropertyValue("offline", out var off) && off != null && off.GetValue<bool>())
+                        beginArgs.Add("-Offline");
+                    output = RunEngine(beginArgs.ToArray());
                     break;
                 case "drawer_exec":
                     output = RunEngine("agent", _boxForTask(Get(args, "task_id", true)), "exec",
@@ -137,6 +155,22 @@ internal static class Program
                 case "drawer_list_tasks":
                     output = RunEngine("agent", "list");
                     break;
+                case "drawer_input":
+                    output = RunEngine("agent", _boxForTask(Get(args, "task_id", true)), "input",
+                        Get(args, "task_id", true), Get(args, "args", true));
+                    break;
+                case "drawer_screenshot":
+                    var shot = Capture(Get(args, "title", false) ?? "boxrun desktop");
+                    Respond(id, new
+                    {
+                        content = new object[]
+                        {
+                            new { type = "image", data = shot.Base64, mimeType = "image/png" },
+                            new { type = "text", text = shot.Path }
+                        },
+                        isError = false
+                    });
+                    return;
                 default:
                     ToolError(id, "unknown tool: " + name);
                     return;
@@ -153,6 +187,57 @@ internal static class Program
             content = new[] { new { type = "text", text = output } },
             isError = false
         });
+    }
+
+
+    private static (string Path, string Base64) Capture(string title)
+    {
+        var hwnd = FindWindowByTitle(title);
+        if (hwnd == IntPtr.Zero) throw new Exception("window not found: " + title);
+        GetWindowRect(hwnd, out var r);
+        var w = Math.Max(1, r.R - r.L);
+        var h = Math.Max(1, r.B - r.T);
+        using var bmp = new Bitmap(w, h);
+        ShowWindow(hwnd, 9);
+        SetForegroundWindow(hwnd);
+        System.Threading.Thread.Sleep(200);
+        using (var g = Graphics.FromImage(bmp))
+            g.CopyFromScreen(r.L, r.T, 0, 0, new Size(w, h));
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "drawer-shot-" + DateTime.Now.ToString("yyyyMMdd-HHmmss-fff") + ".png");
+        bmp.Save(path, ImageFormat.Png);
+        return (path, Convert.ToBase64String(File.ReadAllBytes(path)));
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int L, T, R, B; }
+
+    private delegate bool EnumProc(IntPtr h, IntPtr l);
+    [DllImport("user32.dll")] private static extern bool EnumWindows(EnumProc cb, IntPtr l);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr h, out uint p);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowText(IntPtr h, System.Text.StringBuilder s, int n);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr h);
+    [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] private static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint flags);
+    [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr h);
+    [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr h, int c);
+
+    private static IntPtr FindWindowByTitle(string title)
+    {
+        IntPtr found = IntPtr.Zero;
+        EnumWindows((h, l) =>
+        {
+            if (!IsWindowVisible(h)) return true;
+            var sb = new System.Text.StringBuilder(512);
+            GetWindowText(h, sb, sb.Capacity);
+            if (sb.ToString().IndexOf(title, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                found = h;
+                return false;
+            }
+            return true;
+        }, IntPtr.Zero);
+        return found;
     }
 
     private static string _boxForTask(string taskId)

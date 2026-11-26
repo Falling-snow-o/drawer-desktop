@@ -305,6 +305,12 @@ public partial class MainWindow
     }
 
 
+    private void AgentMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (_busy) { ShowError("有操作在执行，等它结束再试"); return; }
+        new TasksWindow(args => CaptureAsync(args)) { Owner = this }.Show();
+    }
+
     private void CollabMenu_Click(object sender, RoutedEventArgs e)
     {
         if (_busy) { ShowError("有操作在执行，等它结束再试"); return; }

@@ -1,4 +1,4 @@
-# Agent 任务（实验）
+﻿# Agent 任务（实验）
 
 让 Agent 在抽屉里改你的真实项目，但**改动先落在暂存目录**；确认后才写回宿主，失败直接丢弃。
 
@@ -77,6 +77,10 @@ claude mcp add drawer -- "C:\Users\<你>\AppData\Local\Drawer\drawer-mcp.exe"
 | `drawer_end_task` | `commit` 或 `rollback` |
 | `drawer_task_status` | 查看任务和步骤 |
 | `drawer_list_tasks` | 列出所有任务 |
+| `drawer_input` | 往桌面发鼠标/键盘（xdotool），例如 `mousemove 100 200`、`key ctrl+s` |
+| `drawer_screenshot` | 截取 `boxrun desktop` 窗口，返回 PNG |
+
+`begin` 支持 `offline: true`：任务里的命令会在无网络命名空间（`unshare -n`）中执行。
 
 ## 安全边界
 
@@ -87,9 +91,18 @@ claude mcp add drawer -- "C:\Users\<你>\AppData\Local\Drawer\drawer-mcp.exe"
 - 建议一次只开一个任务；并发任务没有全局锁
 - 大目录首次复制会慢
 
+## 界面
+
+面板 → **Agent 任务…**：
+
+- 左边任务列表，右边步骤
+- 每步显示命令、退出码、改动文件、diff、输出
+- 可直接「提交到宿主」或「回滚」
+
 ## 限制
 
-- 没有界面（CLI + MCP 先用）
-- 没有截图/鼠标键盘工具
+- 同一个盒子同时只允许一个任务（第二个 begin 会被拒绝）
+- 离线只是 `unshare -n`，没有白名单网络
 - 二进制文件按文件复制，不做三方合并
 - 宿主目录必须是普通目录，不支持网络盘
+- 截图依赖桌面窗口正在运行
