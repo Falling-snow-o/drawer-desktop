@@ -115,12 +115,6 @@ done
         'chmod +x /usr/local/bin/boxrun-desktop.sh /usr/local/bin/boxrun-desktop-watch.sh; systemctl stop boxrun-desktop-watch 2>/dev/null || true') -Quiet | Out-Null
 
     $r2 = Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '/usr/local/bin/boxrun-desktop.sh') -Quiet
-    $watchStart = Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '-c',
-        'systemd-run --unit=boxrun-desktop-watch --collect /usr/local/bin/boxrun-desktop-watch.sh') -Quiet
-    if ($watchStart.Code -ne 0) {
-        Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '-c',
-            'setsid /usr/local/bin/boxrun-desktop-watch.sh >/dev/null 2>&1 < /dev/null &') -Quiet | Out-Null
-    }
     foreach ($l in $r2.Out) { if ($l.Trim()) { Write-Host ("    " + $l) } }
 
     if (($r2.Out -join ' ') -match 'window=1') {
