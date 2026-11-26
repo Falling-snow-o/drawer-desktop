@@ -3,6 +3,7 @@
 # 显示号按抽屉名算，避免多个抽屉共用 :1 互相冲突（抽象 socket 是共享的）
 unset WAYLAND_DISPLAY
 export DISPLAY=:0
+export LANG=zh_CN.UTF-8 LANGUAGE=zh_CN:zh LC_ALL=zh_CN.UTF-8
 
 NAME=$(cat /etc/boxrun/boxname 2>/dev/null || hostname)
 NUM=$(( 10 + $(printf '%s' "$NAME" | cksum | awk '{print $1}') % 80 ))

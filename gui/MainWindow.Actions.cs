@@ -53,7 +53,7 @@ public partial class MainWindow
             var psi = new ProcessStartInfo("wt.exe")
             {
                 UseShellExecute = true,
-                Arguments = "new-tab --title " + q2 + "Drawer: " + b + q2 + " " + _ps + " -NoExit -NoProfile -ExecutionPolicy Bypass -Command " + q2 + "& '" + _engine + "' exec " + b + " bash" + q2
+                Arguments = "new-tab --title " + q2 + "Drawer: " + b + q2 + " " + _ps + " -NoExit -NoProfile -ExecutionPolicy Bypass -Command " + q2 + "& '" + _engine + "' up " + b + " *> $null; wsl.exe -d " + b + " -u root -- /usr/local/bin/boxrun-exec bash -l" + q2
             };
             Process.Start(psi);
             return;
@@ -63,7 +63,7 @@ public partial class MainWindow
         try
         {
             var psi = new ProcessStartInfo(_ps,
-                $"-NoExit -NoProfile -ExecutionPolicy Bypass -Command \"& '{_engine}' exec {b} bash\"")
+                $"-NoExit -NoProfile -ExecutionPolicy Bypass -Command \"& '{_engine}' up {b} *> $null; wsl.exe -d {b} -u root -- /usr/local/bin/boxrun-exec bash -l\"")
             { UseShellExecute = true };
             Process.Start(psi);
         }

@@ -90,6 +90,37 @@ timeout 1800 apt-get install -y -qq --no-install-recommends -o Dpkg::Lock::Timeo
     Set-GuestFile -Distro $cfg.Name -Path '/etc/boxrun/boxname' -Content $cfg.Name
     $rres = if ($env:BOXRUN_DESKTOP_RES) { $env:BOXRUN_DESKTOP_RES } else { '1600x1000' }
     Set-GuestFile -Distro $cfg.Name -Path '/etc/boxrun/desktop.res' -Content $rres
+    # 中文界面：首次安装语言包 + CJK 字体
+    $loc = Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '-c',
+        'grep -q "zh_CN" /etc/default/locale 2>/dev/null && [ -d /usr/lib/locale/zh_CN.UTF-8 ] && echo yes || echo no') -Quiet
+    if (($loc.Out -join '') -notmatch 'yes') {
+        Write-Step "安装中文语言包与字体（首次约 1-2 分钟）"
+        $locScript = @'
+export DEBIAN_FRONTEND=noninteractive
+timeout 240 apt-get update -qq >/tmp/boxrun-locale.log 2>&1 || true
+timeout 600 apt-get install -y -qq --no-install-recommends locales language-pack-zh-hans fonts-noto-cjk >>/tmp/boxrun-locale.log 2>&1
+locale-gen zh_CN.UTF-8 >>/tmp/boxrun-locale.log 2>&1 || true
+update-locale LANG=zh_CN.UTF-8 LANGUAGE=zh_CN:zh >>/tmp/boxrun-locale.log 2>&1 || true
+'@
+        Set-GuestFile -Distro $cfg.Name -Path '/tmp/boxrun-locale.sh' -Content $locScript
+        Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '/tmp/boxrun-locale.sh') -Quiet | Out-Null
+        Write-Ok "中文语言包已安装"
+    }
+
+    # 基础镜像默认排除了 .mo 翻译文件，导致界面始终英文
+    $tr = Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '-c',
+        'test -f /usr/share/locale/zh_CN/LC_MESSAGES/xfce4-panel.mo && echo yes || echo no') -Quiet
+    if (($tr.Out -join '') -notmatch 'yes') {
+        Write-Step "补齐中文翻译（首次约 1 分钟）"
+        $i18n = @'
+sed -i 's|^path-exclude=/usr/share/locale.*|# &|' /etc/dpkg/dpkg.cfg.d/excludes 2>/dev/null || true
+export DEBIAN_FRONTEND=noninteractive
+timeout 600 apt-get install --reinstall -y -qq xfce4-panel xfce4-settings xfce4-session xfce4-terminal thunar thunar-data xfwm4 libgtk-3-0 >/tmp/boxrun-i18n.log 2>&1
+'@
+        Set-GuestFile -Distro $cfg.Name -Path '/tmp/boxrun-i18n.sh' -Content $i18n
+        Invoke-Wsl -WslArgs @('-d', $cfg.Name, '-u', 'root', '--', 'bash', '/tmp/boxrun-i18n.sh') -Quiet | Out-Null
+    }
+
     $desktopBody = Get-Content -LiteralPath $runFile -Raw -Encoding UTF8
     Set-GuestFile -Distro $cfg.Name -Path '/usr/local/bin/boxrun-desktop.sh' -Content $desktopBody
 
