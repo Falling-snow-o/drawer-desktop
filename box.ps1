@@ -127,6 +127,7 @@ finally { [BoxRunAwake]::SetThreadExecutionState([uint32]'0x80000000') | Out-Nul
 . (Join-Path $ScriptRoot "lib\engine\diagnostics.ps1")
 . (Join-Path $ScriptRoot "lib\engine\templates.ps1")
 . (Join-Path $ScriptRoot "lib\engine\collab.ps1")
+. (Join-Path $ScriptRoot "lib\engine\agent.ps1")
 . (Join-Path $ScriptRoot "lib\engine\api.ps1")
 
 # 被 GUI 的常驻引擎 dot-source 时，只加载函数与变量，不执行分发
@@ -225,6 +226,7 @@ switch ($v) {
     'cache-clear' { Invoke-CacheClear; break }
     'ports'       { Invoke-Ports; break }
     'collab'      { Invoke-Collab; break }
+    'agent'       { Invoke-Agent; break }
     'rename'      { Invoke-Rename -NewName $Rest[0]; break }
     'export-app'  { Invoke-ExportApp -Name $Rest[0] -Command $Rest[1]; break }
     'about'       { Invoke-About; break }

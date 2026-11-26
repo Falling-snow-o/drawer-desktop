@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>drawer-mcp</AssemblyName>
+    <RootNamespace>DrawerMcp</RootNamespace>
+    <Version>0.1.0</Version>
+    <Product>Drawer MCP</Product>
+    <Company>Drawer Desktop contributors</Company>
+    <Description>MCP server exposing Drawer Desktop agent tasks</Description>
+  </PropertyGroup>
+</Project>

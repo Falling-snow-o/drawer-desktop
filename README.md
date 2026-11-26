@@ -1,4 +1,4 @@
-# Drawer Desktop
+﻿# Drawer Desktop
 
 Windows 上的 WSL2 抽屉管理器。一个目录就是一个 Linux 环境：能装、能停、能快照、能删。
 
@@ -77,6 +77,18 @@ box.ps1 collab demo merge master
 ```
 
 细节见 [COLLAB.md](COLLAB.md)。
+
+## Agent（实验）
+
+可以把宿主目录交给 Agent，改动先进暂存，确认后才写回：
+
+```powershell
+box.ps1 agent lab begin D:\work\project
+box.ps1 agent lab exec <taskId> "npm test"
+box.ps1 agent lab end <taskId> commit
+```
+
+也提供 MCP 服务 `drawer-mcp.exe`，详见 [AGENT.md](AGENT.md)。
 
 ## 构建与测试
 

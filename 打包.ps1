@@ -68,6 +68,13 @@ foreach ($dir in @('lib','vram','examples','guest')) {
     Copy-Item (Join-Path $root $dir) $stage -Recurse -Force
 }
 
+Write-Host "[4/5] 编译 MCP 服务"
+$mcpOut = Join-Path $dist 'mcp'
+& $dotnet publish (Join-Path $root 'mcp\DrawerMcp.csproj') -c Release -r win-x64 `
+    --self-contained false -p:PublishSingleFile=true -p:Version=$Version -o $mcpOut -v quiet
+if ($LASTEXITCODE -ne 0) { throw '编译 drawer-mcp 失败' }
+Copy-Item (Join-Path $mcpOut 'drawer-mcp.exe') $stage -Force
+
 Write-Host "[4/5] 生成 payload.zip"
 $payload = Join-Path $root 'installer\payload.zip'
 Remove-Item $payload -Force -EA SilentlyContinue
