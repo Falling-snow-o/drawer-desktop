@@ -259,7 +259,13 @@ public partial class MainWindow
     {
         var p = _runProc;
         if (p == null) return;
-        try { p.Kill(true); Log("[取消] 已终止当前任务"); } catch { }
+        CancelBtn.IsEnabled = false;
+        try
+        {
+            p.Kill(true);
+            Log("[中止] 已终止当前操作，可能留下半成品");
+        }
+        catch (Exception ex) { Log("[中止] " + ex.Message); }
     }
 
 

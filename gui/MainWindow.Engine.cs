@@ -100,6 +100,8 @@ public partial class MainWindow
         InteractionHub.SetBusy(true);
         _lastActive = DateTime.Now;
         ProgressText.Text = "执行中 0s";
+        CancelBtn.Visibility = Visibility.Visible;
+        CancelBtn.IsEnabled = true;
         SetButtons();
         Bar.Visibility = Visibility.Visible;
         Bar.IsIndeterminate = true;
@@ -149,6 +151,7 @@ public partial class MainWindow
             Log($"[结束] {string.Join(' ', args)} · {(DateTime.Now - _busyStart).TotalSeconds:0.0}s");
             _runProc = null;
             _busy = false;
+            CancelBtn.Visibility = Visibility.Collapsed;
             ClearBusyMark();
             InteractionHub.SetBusy(false);
             InteractionHub.NotifyAction(args.Length > 0 ? args[0] : "action");

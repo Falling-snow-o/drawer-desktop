@@ -109,6 +109,8 @@ function Invoke-Exec {
 
     $cmd = @('bash')
     if ($Rest -and $Rest.Count -gt 0) { $cmd = $Rest }
+    # 单个带空格的字符串当作 shell 命令，例如 exec lab "npm test"
+    if ($Rest.Count -eq 1 -and ([string]$Rest[0]) -match '\s') { $cmd = @('bash', '-lc', [string]$Rest[0]) }
 
     if ($cfg.Env -and $cfg.Env.Count -gt 0) {
         $envList = @()

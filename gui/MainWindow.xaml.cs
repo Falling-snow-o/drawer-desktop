@@ -210,6 +210,7 @@ public partial class MainWindow : Window
         if (line.Length == 0) return false;
         if (line.StartsWith("▸ box.ps1")) return true;          // 开始
         if (line.StartsWith("[结束]")) return true;             // 结束
+        if (line.StartsWith("[中止]")) return true;             // 中止
         if (line.StartsWith("[标签]") || line.StartsWith("[快照]")) return true;
 
         // 问题

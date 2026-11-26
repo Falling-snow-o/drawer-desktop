@@ -446,7 +446,7 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
               <TextBlock x:Name="ProgressText" Foreground="#86868B" FontSize="11"
                          VerticalAlignment="Center" Margin="0,0,10,0"/>
-              <Button x:Name="CancelBtn" Content="取消" Visibility="Collapsed" Click="CancelBtn_Click" Margin="0,0,8,0"/>
+              <Button x:Name="CancelBtn" Content="中止" Visibility="Collapsed" Click="CancelBtn_Click" Margin="0,0,8,0"/>
           <Button x:Name="ClearLogBtn" Content="清空" Padding="10,2" FontSize="11"
                       Background="Transparent" Foreground="#0071E3" Margin="0" Click="ClearLogBtn_Click"/>
             </StackPanel>
