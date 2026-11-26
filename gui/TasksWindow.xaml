@@ -1,28 +1,27 @@
-<Window x:Class="BoxRun.TasksWindow"
+﻿<Window x:Class="BoxRun.TasksWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Agent 任务" Width="980" Height="640"
+        Title="AI 任务" Width="980" Height="660"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="#F2F2F7" Foreground="#1D1D1F"
+        Background="#F5F5F7" Foreground="#1D1D1F"
         FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">
   <Grid Margin="18">
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="300"/>
+      <ColumnDefinition Width="280"/>
       <ColumnDefinition Width="14"/>
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
-    <Border Grid.Column="0" Background="#FFFFFF" CornerRadius="12" Padding="10">
+    <Border Grid.Column="0" Background="#FFFFFF" CornerRadius="14" Padding="12">
       <Grid>
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <Grid>
-          <TextBlock Text="任务" FontSize="18" FontWeight="Bold"/>
-          <Button Content="刷新" HorizontalAlignment="Right" Padding="12,5"
-                  BorderThickness="0" Background="#E9E9ED" Click="RefreshBtn_Click"/>
-        </Grid>
+        <StackPanel>
+          <TextBlock Text="AI 任务" FontSize="20" FontWeight="Bold"/>
+          <TextBlock Text="AI 改过的文件夹会出现在这里" Foreground="#86868B" FontSize="11" Margin="0,3,0,0"/>
+        </StackPanel>
         <ListBox x:Name="TaskList" Grid.Row="1" Margin="0,10,0,0" BorderThickness="0"
                  Background="Transparent" SelectionChanged="TaskList_SelectionChanged"/>
       </Grid>
@@ -37,28 +36,48 @@
       </Grid.RowDefinitions>
 
       <StackPanel>
-        <TextBlock x:Name="TitleText" Text="未选择任务" FontSize="22" FontWeight="Bold"/>
-        <TextBlock x:Name="SubText" Text="" Foreground="#86868B" FontSize="11" Margin="0,4,0,0"/>
+        <TextBlock x:Name="TitleText" Text="还没有任务" FontSize="24" FontWeight="Bold"/>
+        <TextBlock x:Name="SubText" Text="让 AI 帮你改代码时，每一步都会记在这里" Foreground="#86868B"
+                   FontSize="12" Margin="0,5,0,0"/>
       </StackPanel>
 
-      <ListBox x:Name="StepList" Grid.Row="1" Height="170" Margin="0,12,0,10"
-               BorderThickness="0" Background="#FFFFFF" SelectionChanged="StepList_SelectionChanged"/>
+      <Border x:Name="HelpCard" Grid.Row="1" Background="#FFFFFF" CornerRadius="12"
+              Padding="16" Margin="0,14,0,10">
+        <StackPanel>
+          <TextBlock Text="怎么用" FontSize="15" FontWeight="SemiBold"/>
+          <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" LineHeight="24" Foreground="#3A3A3C"
+                     Text="1. 安装 Claude Code 或 Cursor（任选一个）&#x0a;2. 点下面的「复制连接配置」，粘到 AI 工具的 MCP 设置里&#x0a;3. 对 AI 说：用 drawer 工具修改 D:\你的项目"/>
+          <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+            <Button Content="复制连接配置" Padding="14,7" BorderThickness="0" Background="#0071E3"
+                    Foreground="White" Click="CopyConfigBtn_Click"/>
+            <Button Content="打开说明" Padding="14,7" Margin="8,0,0,0" BorderThickness="0"
+                    Background="#E9E9ED" Click="DocsBtn_Click"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
 
-      <Border Grid.Row="2" Background="#FFFFFF" CornerRadius="12" Padding="10">
+      <ListBox x:Name="StepList" Grid.Row="1" Height="110" Margin="0,14,0,8"
+               BorderThickness="0" Background="#FFFFFF" Visibility="Collapsed"
+               SelectionChanged="StepList_SelectionChanged"/>
+
+      <Border Grid.Row="2" Background="#FFFFFF" CornerRadius="12" Padding="12">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-          <TextBox x:Name="DetailBox" BorderThickness="0" Background="Transparent"
-                   FontFamily="Cascadia Mono, Consolas" FontSize="11.5"
-                   IsReadOnly="True" TextWrapping="Wrap"/>
+          <StackPanel>
+            <TextBlock x:Name="DetailTitle" Text="AI 会做什么" FontSize="12" Foreground="#86868B"/>
+            <TextBox x:Name="DetailBox" BorderThickness="0" Background="Transparent" Margin="0,6,0,0"
+                     FontFamily="Cascadia Mono, Consolas" FontSize="11.5"
+                     IsReadOnly="True" TextWrapping="Wrap" Text="&#x0a;准备就绪后，这里会显示 AI 改了什么。"/>
+          </StackPanel>
         </ScrollViewer>
       </Border>
 
       <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,0">
-        <Button Content="提交到宿主" Padding="14,7" BorderThickness="0" Background="#0071E3"
-                Foreground="White" Click="CommitBtn_Click"/>
-        <Button Content="回滚" Padding="14,7" Margin="8,0,0,0" BorderThickness="0"
-                Background="#E9E9ED" Click="RollbackBtn_Click"/>
-        <Button Content="关闭" Padding="14,7" Margin="8,0,0,0" BorderThickness="0"
-                Background="#E9E9ED" Click="CloseBtn_Click" HorizontalAlignment="Right"/>
+        <Button x:Name="CommitBtn" Content="保留这些改动" Padding="16,8" BorderThickness="0"
+                Background="#0071E3" Foreground="White" IsEnabled="False" Click="CommitBtn_Click"/>
+        <Button x:Name="RollbackBtn" Content="全部撤销" Padding="16,8" Margin="8,0,0,0"
+                BorderThickness="0" Background="#E9E9ED" IsEnabled="False" Click="RollbackBtn_Click"/>
+        <Button Content="关闭" Padding="16,8" Margin="8,0,0,0" BorderThickness="0"
+                Background="#E9E9ED" HorizontalAlignment="Right" Click="CloseBtn_Click"/>
       </StackPanel>
     </Grid>
   </Grid>

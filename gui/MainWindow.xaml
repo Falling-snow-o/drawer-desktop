@@ -323,7 +323,7 @@
                 <MenuItem Header="检查更新…" Click="UpdateMenu_Click"/>
                 <MenuItem Header="导出诊断包…" Click="DiagMenu_Click"/>
                 <MenuItem Header="协同…" Click="CollabMenu_Click"/>
-                <MenuItem Header="Agent 任务…" Click="AgentMenu_Click"/>
+                <MenuItem Header="AI 任务…" Click="AgentMenu_Click"/>
               </ContextMenu>
             </Button.ContextMenu>
           </Button>
