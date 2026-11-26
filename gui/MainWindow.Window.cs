@@ -32,7 +32,7 @@ public partial class MainWindow
             };
             var menu = new System.Windows.Forms.ContextMenuStrip();
             menu.Items.Add("显示窗口", null, (_, _) => RestoreFromTray());
-            menu.Items.Add("退出", null, (_, _) => { _reallyExit = true; Close(); });
+            menu.Items.Add("退出（停止所有抽屉）", null, (_, _) => { _reallyExit = true; Close(); });
             _tray.ContextMenuStrip = menu;
             _tray.DoubleClick += (_, _) => RestoreFromTray();
         }
@@ -118,21 +118,87 @@ public partial class MainWindow
 
         try { _client?.Dispose(); } catch { }
 
-        var b = SelectedBox;
-        bool running = _hasInfo && _info.TryGetProperty("running", out var r) && r.ValueKind == JsonValueKind.True;
-        if (b == null || !running) return;
+        // 真正退出时：停掉所有正在运行的抽屉，并在没有其它发行版时关掉 WSL 虚拟机
+        StopAllDrawersOnExit();
+    }
 
+    private static void StopAllDrawersOnExit()
+    {
         try
         {
-            Process.Start(new ProcessStartInfo
+            var names = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var reg = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".boxrun", "boxes.json");
+            if (File.Exists(reg))
             {
-                FileName = _ps,
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{_engine}\" down {b}",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WorkingDirectory = _root
-            });
+                using var doc = JsonDocument.Parse(File.ReadAllText(reg));
+                if (doc.RootElement.TryGetProperty("boxes", out var boxes))
+                    foreach (var b in boxes.EnumerateArray())
+                        if (b.TryGetProperty("name", out var n) && n.GetString() is { } s)
+                            names.Add(s);
+            }
+
+            foreach (var name in WslRunning())
+                if (names.Contains(name))
+                    RunWsl(6000, "--terminate", name);
+
+            // 只剩我们自己的抽屉时，直接关掉 WSL 虚拟机，释放 vmmemWSL
+            var left = WslRunning();
+            var onlyDrawers = left.All(n => names.Contains(n));
+            if (onlyDrawers) RunWsl(8000, "--shutdown");
         }
         catch { }
+    }
+
+    private static void RunWsl(int timeoutMs, params string[] args)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("wsl.exe")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                StandardOutputEncoding = System.Text.Encoding.Unicode,
+                StandardErrorEncoding = System.Text.Encoding.Unicode
+            };
+            foreach (var a in args) psi.ArgumentList.Add(a);
+            using var p = Process.Start(psi);
+            if (p == null) return;
+            p.StandardOutput.ReadToEnd();
+            p.StandardError.ReadToEnd();
+            p.WaitForExit(timeoutMs);
+        }
+        catch { }
+    }
+
+    private static System.Collections.Generic.List<string> WslRunning()
+    {
+        var list = new System.Collections.Generic.List<string>();
+        try
+        {
+            var psi = new ProcessStartInfo("wsl.exe")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                StandardOutputEncoding = System.Text.Encoding.Unicode
+            };
+            psi.ArgumentList.Add("-l");
+            psi.ArgumentList.Add("--running");
+            psi.ArgumentList.Add("-q");
+            using var p = Process.Start(psi);
+            if (p == null) return list;
+            var text = p.StandardOutput.ReadToEnd();
+            p.WaitForExit(5000);
+            foreach (var part in text.Split('\n'))
+            {
+                var s = part.Replace("\0", "").Trim();
+                if (s.Length > 0) list.Add(s);
+            }
+        }
+        catch { }
+        return list;
     }
 }
