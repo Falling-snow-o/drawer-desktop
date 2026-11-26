@@ -48,8 +48,10 @@
           <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" LineHeight="24" Foreground="#3A3A3C"
                      Text="1. 安装 Claude Code 或 Cursor（任选一个）&#x0a;2. 点下面的「复制连接配置」，粘到 AI 工具的 MCP 设置里&#x0a;3. 对 AI 说：用 drawer 工具修改 D:\你的项目"/>
           <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-            <Button Content="复制连接配置" Padding="14,7" BorderThickness="0" Background="#0071E3"
-                    Foreground="White" Click="CopyConfigBtn_Click"/>
+            <Button Content="一键连接 AI 工具" Padding="16,8" BorderThickness="0" Background="#0071E3"
+                    Foreground="White" Click="ConnectBtn_Click"/>
+            <Button Content="复制配置（手动）" Padding="14,7" Margin="8,0,0,0" BorderThickness="0"
+                    Background="#E9E9ED" Click="CopyConfigBtn_Click"/>
             <Button Content="打开说明" Padding="14,7" Margin="8,0,0,0" BorderThickness="0"
                     Background="#E9E9ED" Click="DocsBtn_Click"/>
           </StackPanel>

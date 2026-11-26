@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -189,6 +190,93 @@ public partial class TasksWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(this, "操作失败：" + ex.Message, "AI 任务");
+        }
+    }
+
+    private void ConnectBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var exe = Path.Combine(AppContext.BaseDirectory, "drawer-mcp.exe");
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var lines = new List<string>();
+
+        // Claude Code
+        var claude = Path.Combine(home, ".claude.json");
+        if (File.Exists(claude))
+        {
+            lines.Add(MergeJson(claude, exe, "Claude Code"));
+        }
+
+        // Cursor
+        var cursorDir = Path.Combine(home, ".cursor");
+        if (Directory.Exists(cursorDir))
+        {
+            lines.Add(MergeJson(Path.Combine(cursorDir, "mcp.json"), exe, "Cursor", create: true));
+        }
+
+        // Claude Desktop
+        var desktopDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Claude");
+        if (Directory.Exists(desktopDir))
+        {
+            lines.Add(MergeJson(Path.Combine(desktopDir, "claude_desktop_config.json"), exe, "Claude Desktop", create: true));
+        }
+
+        // Codex CLI
+        var codex = Path.Combine(home, ".codex", "config.toml");
+        if (File.Exists(codex))
+        {
+            try
+            {
+                var text = File.ReadAllText(codex);
+                if (!text.Contains("[mcp_servers.drawer]"))
+                {
+                    File.Copy(codex, codex + ".drawer.bak", true);
+                    var block = "\n[mcp_servers.drawer]\ncommand = \"" + exe.Replace("\\", "/") + "\"\n";
+                    File.AppendAllText(codex, block);
+                }
+                lines.Add("✅ Codex：已写入配置");
+            }
+            catch (Exception ex) { lines.Add("⚠️ Codex：" + ex.Message); }
+        }
+
+        if (lines.Count == 0)
+            lines.Add("没有检测到 Claude Code / Cursor / Claude Desktop / Codex。\n请先用「复制配置（手动）」添加。");
+
+        MessageBox.Show(this,
+            string.Join("\n", lines) + "\n\n重启对应的 AI 工具后生效。",
+            "连接 AI 工具");
+    }
+
+    private static string MergeJson(string path, string exe, string name, bool create = false)
+    {
+        try
+        {
+            JsonObject root;
+            if (File.Exists(path))
+            {
+                root = JsonNode.Parse(File.ReadAllText(path)) as JsonObject ?? new JsonObject();
+                File.Copy(path, path + ".drawer.bak", true);
+            }
+            else if (create)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                root = new JsonObject();
+            }
+            else
+            {
+                return "— " + name + "：未找到配置";
+            }
+
+            var servers = root["mcpServers"] as JsonObject ?? new JsonObject();
+            servers["drawer"] = new JsonObject { ["command"] = exe };
+            root["mcpServers"] = servers;
+
+            var json = root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(path, json, new System.Text.UTF8Encoding(false));
+            return "✅ " + name + "：已写入配置";
+        }
+        catch (Exception ex)
+        {
+            return "⚠️ " + name + "：" + ex.Message;
         }
     }
 
